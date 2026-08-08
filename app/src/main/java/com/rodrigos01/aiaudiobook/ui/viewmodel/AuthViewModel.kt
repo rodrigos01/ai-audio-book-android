@@ -1,8 +1,10 @@
 package com.rodrigos01.aiaudiobook.ui.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseUser
+import com.rodrigos01.aiaudiobook.R
 import com.rodrigos01.aiaudiobook.data.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,22 +58,25 @@ class AuthViewModel(private val authRepository: AuthRepository = AuthRepository(
         }
     }
 
-    fun loginWithGoogle(context: android.content.Context) {
+    fun loginWithGoogle(context: Context) {
         _uiState.value = AuthUiState.Loading
         viewModelScope.launch {
-            val webClientId = "883622140264-bvabb03s21b4vq0hul9jlo73f7h4vj5l.apps.googleusercontent.com"
+            // Retrieve the Web Client ID from the auto-generated resource from google-services.json
+            // Using R.string.default_web_client_id is the standard, non-deprecated way
+            val webClientId = context.getString(R.string.default_web_client_id)
+            
             authRepository.signInWithGoogle(context, webClientId).fold(
                 onSuccess = { authResult ->
                     _uiState.value = AuthUiState.Authenticated(authResult.user!!)
                 },
                 onFailure = { exception ->
-                    _uiState.value = AuthUiState.Error(exception.localizedMessage ?: "Google Sign-In failed.")
+                    _uiState.value = AuthUiState.Error(exception.message ?: "Google Sign-In failed.")
                 }
             )
         }
     }
 
-    fun signOut(context: android.content.Context) {
+    fun signOut(context: Context) {
         _uiState.value = AuthUiState.Loading
         viewModelScope.launch {
             authRepository.signOut(context)

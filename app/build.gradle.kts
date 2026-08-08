@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
@@ -6,9 +8,25 @@ plugins {
   alias(libs.plugins.firebase.appdistribution)
 }
 
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+
 android {
     namespace = "com.rodrigos01.aiaudiobook"
     compileSdk = 36
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("ai-audio-book-keystore")
+            storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
+            keyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
+            keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
+        }
+    }
+
     defaultConfig {
         applicationId = "com.rodrigos01.aiaudiobook"
         minSdk = 24
@@ -21,12 +39,11 @@ android {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("release")
             firebaseAppDistribution {
                 artifactType = "APK"
                 serviceCredentialsFile = "app/ai-audio-book-2c2ff064ff10.json"
-                // You can add testers or groups here:
-                // testers = "your-email@example.com"
-                 groups = "devs"
+                groups = "devs"
             }
         }
     }

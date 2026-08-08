@@ -45,10 +45,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rodrigos01.aiaudiobook.data.Chapter
 import com.rodrigos01.aiaudiobook.data.Title
+import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
 import com.rodrigos01.aiaudiobook.theme.AccentOrange
 import com.rodrigos01.aiaudiobook.theme.BorderColor
 import com.rodrigos01.aiaudiobook.theme.CardBackground
@@ -78,6 +80,27 @@ fun ChaptersScreen(
     LaunchedEffect(title.id) {
         chaptersViewModel.fetchChapters(title.id)
     }
+
+    ChaptersScreen(
+        title,
+        chaptersState,
+        onBackClick,
+        onChapterClick,
+        onReloadClick = { chaptersViewModel.fetchChapters(title.id) },
+        modifier,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChaptersScreen(
+    title: Title,
+    chaptersState: ChaptersUiState,
+    onBackClick: () -> Unit,
+    onChapterClick: (Chapter) -> Unit,
+    onReloadClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
 
     Scaffold(
         topBar = {
@@ -159,7 +182,7 @@ fun ChaptersScreen(
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
                         Button(
-                            onClick = { chaptersViewModel.fetchChapters(title.id) },
+                            onClick = onReloadClick,
                             colors = ButtonDefaults.buttonColors(containerColor = Indigo500)
                         ) {
                             Text("Retry")
@@ -193,8 +216,7 @@ fun ChaptersScreen(
                         ) {
                             items(chapters) { chapter ->
                                 ChapterItemCard(
-                                    chapter = chapter,
-                                    modifier = Modifier.clickable(onClick = {
+                                    chapter = chapter, modifier = Modifier.clickable(onClick = {
                                         onChapterClick(chapter)
                                     })
                                 )
@@ -220,95 +242,66 @@ fun ChapterItemCard(
             containerColor = DarkSurface.copy(alpha = 0.8f)
         )
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
+        Row(
+            modifier = Modifier.fillMaxWidth()
                 .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Chapter Title & Number Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Chapter ${chapter.order_index}",
-                        style = Typography.titleMedium,
-                        color = Violet500,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = chapter.name ?: "Untitled Chapter",
-                        style = Typography.titleLarge,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
-                }
+            Text(
+                text = chapter.order_index.toString(),
+                style = Typography.titleMedium,
+                color = Violet500,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = chapter.name ?: "Untitled Chapter",
+                style = Typography.titleLarge,
+                color = TextPrimary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                modifier = Modifier.weight(1f),
+            )
 
-                // SSML format indicator
-                if (chapter.is_ssml) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(AccentOrange.copy(alpha = 0.15f))
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "SSML Enabled",
-                            color = AccentOrange,
-                            style = Typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 10.sp
-                        )
-                    }
-                }
-            }
-
-            // Voice info
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Hearing,
-                    contentDescription = "Narration voice",
-                    tint = TextSecondary,
-                    modifier = Modifier.size(14.dp)
-                )
-                Text(
-                    text = "Narrator Voice: ${chapter.voice_id}",
-                    style = Typography.bodyMedium,
-                    color = TextSecondary,
-                    fontSize = 13.sp
-                )
-            }
-
-            // Chapter Content Display Container (Read-only, Scrollable)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 200.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(CardBackground.copy(alpha = 0.5f))
-                    .border(1.dp, BorderColor.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
-                    .padding(12.dp)
-            ) {
-                Column(
+            // SSML format indicator
+            if (chapter.is_ssml) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(AccentOrange.copy(alpha = 0.15f))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = chapter.content,
-                        style = Typography.bodyMedium,
-                        color = TextPrimary.copy(alpha = 0.9f),
-                        lineHeight = 22.sp
+                        text = "SSML Enabled",
+                        color = AccentOrange,
+                        style = Typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 10.sp
                     )
                 }
             }
+        }
+    }
+}
+
+@Preview
+@Composable
+fun ChaptersScreenPreview() {
+    AIAudioBookTheme {
+        Scaffold { innerPadding ->
+            ChaptersScreen(
+                title = Title(id = "123", name = "Sample Title"),
+                onBackClick = {},
+                onChapterClick = {},
+                onReloadClick = {},
+                chaptersState = ChaptersUiState.Success(
+                    chapters = listOf(
+                        Chapter(order_index = 0, id = "1", name = "Chapter 1", content = "Chapter content 1"),
+                        Chapter(order_index = 1, id = "2", name = "Chapter 2", content = "Chapter content 2", is_ssml = true)
+                    )
+                ),
+                modifier = Modifier.padding(innerPadding),
+            )
         }
     }
 }

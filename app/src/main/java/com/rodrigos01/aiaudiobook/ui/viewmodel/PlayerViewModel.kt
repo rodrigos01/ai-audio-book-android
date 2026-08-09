@@ -9,6 +9,7 @@ import com.rodrigos01.aiaudiobook.common.media.MediaPlaybackService
 import com.rodrigos01.aiaudiobook.common.media.PlaybackStatus
 import com.rodrigos01.aiaudiobook.data.ApiRepository
 import com.rodrigos01.aiaudiobook.data.FirestoreRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -28,6 +29,7 @@ data class PlayerUiState(
     val durationString: String,
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class PlayerViewModel(
     private val titleId: String,
     private val chapterId: String,
@@ -40,8 +42,12 @@ class PlayerViewModel(
     val uiState: StateFlow<PlayerUiState> = firestoreRepository.getTitle(titleId)
         .flatMapLatest { title -> firestoreRepository.getChapters(titleId).map { title to it } }
         .map { (title, chapters) -> title to chapters.first { it.id == chapterId } }
-        .onEach { (_, chapter) ->
-            playbackService.setMedia("https://ai-audio-book-api-883622140264.us-central1.run.app/api/chapters/${chapter.id}/stream".toUri())
+        .onEach { (title, chapter) ->
+            playbackService.setMedia(
+                uri = "https://ai-audio-book-api-883622140264.us-central1.run.app/api/chapters/${chapter.id}/stream".toUri(),
+                title = chapter.name,
+                artist = title?.name,
+            )
         }.combine(playbackState) { (title, chapter), playerState ->
             PlayerUiState(
                 chapterName = chapter.name,

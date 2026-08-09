@@ -1,9 +1,14 @@
 package com.rodrigos01.aiaudiobook
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -76,6 +82,28 @@ class MainActivity : ComponentActivity() {
                 Surface(
                     modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
                 ) {
+                    val context = LocalContext.current.applicationContext
+                    val playbackService = remember { MediaPlaybackService(context) }
+                    DisposableEffect(Unit) {
+                        onDispose { playbackService.release() }
+                    }
+
+                    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+                        ActivityResultContracts.RequestPermission()
+                    ) { _ -> }
+
+                    LaunchedEffect(Unit) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            if (ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.POST_NOTIFICATIONS
+                                ) != PackageManager.PERMISSION_GRANTED
+                            ) {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
+                    }
+
                     val navController = rememberNavController()
                     val authState by authViewModel.uiState.collectAsState()
 
@@ -143,11 +171,6 @@ class MainActivity : ComponentActivity() {
                         }
                         composable<Route.Player> { backStackEntry ->
                             val route = backStackEntry.toRoute<Route.Player>()
-                            val context = LocalContext.current
-                            val playbackService = remember { MediaPlaybackService(context) }
-                            DisposableEffect(Unit) {
-                                onDispose { playbackService.release() }
-                            }
                             val viewModel: PlayerViewModel = viewModel(
                                 factory = PlayerViewModel.Factory(
                                     route.titleId, route.chapterId, playbackService,
@@ -161,7 +184,6 @@ class MainActivity : ComponentActivity() {
                                     navController.popBackStack()
                                 },
                                 onPlayPauseClick = viewModel::onPlayPause,
-                                onSeek = viewModel::onSeek
                             )
                         }
                     }

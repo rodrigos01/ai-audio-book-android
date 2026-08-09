@@ -2,16 +2,20 @@ package com.rodrigos01.aiaudiobook
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -19,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.google.firebase.FirebaseApp
+import com.rodrigos01.aiaudiobook.common.media.MediaPlaybackService
 import com.rodrigos01.aiaudiobook.data.Title
 import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
 import com.rodrigos01.aiaudiobook.ui.screens.ChaptersScreen
@@ -59,7 +64,13 @@ class MainActivity : ComponentActivity() {
         // Initialize Firebase
         FirebaseApp.initializeApp(this)
 
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(
+                android.graphics.Color.TRANSPARENT // Transparent allows your app background to shine through
+            ), navigationBarStyle = SystemBarStyle.dark(
+                android.graphics.Color.TRANSPARENT
+            )
+        )
         setContent {
             AIAudioBookTheme {
                 Surface(
@@ -132,17 +143,25 @@ class MainActivity : ComponentActivity() {
                         }
                         composable<Route.Player> { backStackEntry ->
                             val route = backStackEntry.toRoute<Route.Player>()
+                            val context = LocalContext.current
+                            val playbackService = remember { MediaPlaybackService(context) }
+                            DisposableEffect(Unit) {
+                                onDispose { playbackService.release() }
+                            }
                             val viewModel: PlayerViewModel = viewModel(
                                 factory = PlayerViewModel.Factory(
-                                    route.titleId, route.chapterId
+                                    route.titleId, route.chapterId, playbackService,
                                 )
                             )
                             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                             PlayerScreen(
-                                uiState = uiState, modifier = Modifier.fillMaxSize(),
+                                uiState = uiState,
+                                modifier = Modifier.fillMaxSize(),
                                 onBackClick = {
                                     navController.popBackStack()
                                 },
+                                onPlayPauseClick = viewModel::onPlayPause,
+                                onSeek = viewModel::onSeek
                             )
                         }
                     }

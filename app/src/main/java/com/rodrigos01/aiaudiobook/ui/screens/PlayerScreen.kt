@@ -1,39 +1,38 @@
 package com.rodrigos01.aiaudiobook.ui.screens
 
-import android.net.Uri
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.compose.PlayerSurface
-import androidx.media3.ui.compose.indicators.ProgressIndicator
-import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
-import androidx.media3.ui.compose.state.rememberProgressStateWithTickCount
+import com.rodrigos01.aiaudiobook.common.media.PlaybackStatus
 import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
 import com.rodrigos01.aiaudiobook.theme.TextPrimary
 import com.rodrigos01.aiaudiobook.ui.viewmodel.PlayerUiState
@@ -42,21 +41,26 @@ import com.rodrigos01.aiaudiobook.ui.viewmodel.PlayerUiState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerScreen(
-    uiState: PlayerUiState, onBackClick: () -> Unit, modifier: Modifier = Modifier
+    uiState: PlayerUiState,
+    onBackClick: () -> Unit,
+    onPlayPauseClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val player = remember { ExoPlayer.Builder(context).build() }
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(text = uiState.title ?: "") }, navigationIcon = {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Default.ArrowBack,
-                        contentDescription = "Back",
-                        tint = TextPrimary
-                    )
-                }
-            })
+            TopAppBar(
+                title = {},
+                      navigationIcon = {
+                          IconButton(onClick = onBackClick) {
+                              Icon(
+                                  imageVector = Icons.AutoMirrored.Default.ArrowBack,
+                                  contentDescription = "Back",
+                                  tint = TextPrimary
+                              )
+                          }
+                      },
+                      colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            )
         },
         modifier = modifier,
     ) { innerPadding ->
@@ -65,43 +69,46 @@ fun PlayerScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            PlayerSurface(
-                player = player
-            )
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .align(Alignment.Center)
                     .padding(horizontal = 16.dp),
             ) {
-                val progressState = rememberProgressStateWithTickCount(player)
-                LinearProgressIndicator(progress = { progressState.currentPositionProgress })
-                val playPauseState = rememberPlayPauseButtonState(player)
-                FilledIconButton(
-                    onClick = { playPauseState.onClick() },
+                Text(uiState.chapterName.orEmpty(), style = MaterialTheme.typography.headlineLarge)
+                Text(uiState.titleName.orEmpty(), style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(24.dp))
+                LinearProgressIndicator(
+                    progress = { uiState.playbackProgress }, modifier = Modifier.fillMaxWidth()
+                )
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        if (playPauseState.showPlay) Icons.Default.PlayArrow else Icons.Default.Pause,
-                        contentDescription = "Play/Pause"
+                    Text(uiState.positionString)
+                    Text(uiState.durationString)
+                }
+                when (uiState.playbackStatus) {
+                    PlaybackStatus.PAUSED -> PlayPauseButton(
+                        Icons.Default.PlayArrow,
+                        onPlayPauseClick
                     )
+
+                    PlaybackStatus.BUFFERING -> CircularProgressIndicator()
+                    else -> PlayPauseButton(Icons.Default.Pause, onPlayPauseClick)
                 }
             }
         }
     }
-    DisposableEffect(uiState.mediaURI) {
-        if (uiState.mediaURI != Uri.EMPTY) {
-            player.setMediaItem(
-                MediaItem.Builder().setUri(uiState.mediaURI).setMimeType(MimeTypes.AUDIO_MPEG)
-                    .build()
-            )
-            player.prepare()
-            player.play()
-        }
-        onDispose {
-            if (player.currentMediaItem != null) {
-                player.release()
-            }
-        }
+}
+
+@Composable
+fun PlayPauseButton(imageVector: ImageVector, onPlayPauseClick: () -> Unit) {
+    FilledIconButton(
+        onClick = onPlayPauseClick, modifier = Modifier.size(56.dp)
+    ) {
+        Icon(imageVector, contentDescription = "Play/Pause")
     }
 }
 
@@ -109,6 +116,10 @@ fun PlayerScreen(
 @Preview
 fun PlayerScreenPreview() {
     AIAudioBookTheme {
-        PlayerScreen(PlayerUiState("", Uri.EMPTY), onBackClick = {})
+        PlayerScreen(
+            PlayerUiState("Chapter 1", "A Book", PlaybackStatus.PLAYING, 0.3F, "0:43", "3:45"),
+            onBackClick = {},
+            onPlayPauseClick = {},
+        )
     }
 }

@@ -29,6 +29,22 @@ class FirestoreRepository(private val db: FirebaseFirestore = FirebaseFirestore.
         awaitClose { registration.remove() }
     }.flowOn(Dispatchers.IO)
 
+    fun getTitle(titleId: String): Flow<Title?> = callbackFlow {
+        val registration = db.collection("titles").document(titleId)
+            .addSnapshotListener { documentSnapshot, exception ->
+                if (exception != null) {
+                    close(exception)
+                    return@addSnapshotListener
+                }
+                if (documentSnapshot != null) {
+                    val title =
+                        documentSnapshot.toObject(Title::class.java)?.copy(id = documentSnapshot.id)
+                    trySend(title)
+                }
+            }
+        awaitClose { registration.remove() }
+    }.flowOn(Dispatchers.IO)
+
     fun getChapters(titleId: String): Flow<List<Chapter>> = callbackFlow {
         val registration = db.collection("chapters")
             .whereEqualTo("title_id", titleId)

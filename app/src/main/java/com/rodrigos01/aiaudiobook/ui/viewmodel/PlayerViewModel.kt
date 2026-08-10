@@ -42,20 +42,30 @@ class PlayerViewModel(
     val uiState: StateFlow<PlayerUiState> = firestoreRepository.getTitle(titleId)
         .flatMapLatest { title -> firestoreRepository.getChapters(titleId).map { title to it } }
         .map { (title, chapters) -> title to chapters.first { it.id == chapterId } }
-        .onEach { (title, chapter) ->
+        .flatMapLatest { (title, chapter) ->
+            firestoreRepository.getChapterTotalDurationSeconds(chapter.id).map { durationSec ->
+                Triple(title, chapter, (durationSec * 1000).toLong())
+            }
+        }
+        .onEach { (title, chapter, _) ->
             playbackService.setMedia(
                 uri = "https://ai-audio-book-api-883622140264.us-central1.run.app/api/chapters/${chapter.id}/stream".toUri(),
                 title = chapter.name,
                 artist = title?.name,
             )
-        }.combine(playbackState) { (title, chapter), playerState ->
+        }.combine(playbackState) { (title, chapter, estimatedDurationMs), playerState ->
+            val totalDurationMs = if (estimatedDurationMs > 0) estimatedDurationMs else playerState.durationMillis
+            val progress = if (totalDurationMs > 0) {
+                (playerState.positionMillis.toFloat() / totalDurationMs.toFloat()).coerceIn(0f, 1f)
+            } else 0f
+
             PlayerUiState(
                 chapterName = chapter.name,
                 titleName = title?.name,
                 playbackStatus = playerState.status,
-                playbackProgress = playerState.progress,
+                playbackProgress = progress,
                 positionString = playerState.positionMillis.milliseconds.toDurationString(),
-                durationString = playerState.durationMillis.milliseconds.toDurationString(),
+                durationString = totalDurationMs.milliseconds.toDurationString(),
             )
         }.stateIn(
             viewModelScope,
@@ -67,6 +77,7 @@ class PlayerViewModel(
         when (uiState.value.playbackStatus) {
             PlaybackStatus.PLAYING -> playbackService.pause()
             PlaybackStatus.PAUSED -> playbackService.play()
+            PlaybackStatus.STOPPED -> playbackService.play()
             else -> Unit
         }
     }

@@ -22,3 +22,14 @@ data class Chapter(
     val is_ssml: Boolean = false,
     val created_at: Timestamp? = null
 )
+
+data class ChapterSection(
+    val id: String = "",
+    val chapter_id: String = "",
+    val content: String = "",
+    val estimated_duration: Double = 0.0,
+    val estimated_start_time: Double = 0.0,
+    val section_index: Int = 0,
+    val status: String = "",
+    val audio_file_path: String = ""
+)

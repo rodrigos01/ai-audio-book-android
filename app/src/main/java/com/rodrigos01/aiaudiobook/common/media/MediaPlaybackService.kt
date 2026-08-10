@@ -91,7 +91,8 @@ class MediaPlaybackService(context: Context) {
         mimeType: String = MimeTypes.AUDIO_MPEG,
         playWhenReady: Boolean = true
     ) {
-        if (currentMediaUri == uri) return
+        val ctrl = controller
+        if (currentMediaUri == uri && ctrl?.playbackState != Player.STATE_ENDED) return
         currentMediaUri = uri
 
         val metadata = MediaMetadata.Builder()
@@ -105,22 +106,27 @@ class MediaPlaybackService(context: Context) {
             .setMediaMetadata(metadata)
             .build()
 
-        val executeSetMedia = { ctrl: MediaController ->
-            ctrl.playWhenReady = playWhenReady
-            ctrl.setMediaItem(mediaItem)
-            ctrl.prepare()
+        val executeSetMedia = { targetCtrl: MediaController ->
+            targetCtrl.playWhenReady = playWhenReady
+            targetCtrl.setMediaItem(mediaItem)
+            targetCtrl.prepare()
         }
 
         controller?.let {
             executeSetMedia(it)
         } ?: scope.launch {
-            val ctrl = controllerState.filterNotNull().first()
-            executeSetMedia(ctrl)
+            val targetCtrl = controllerState.filterNotNull().first()
+            executeSetMedia(targetCtrl)
         }
     }
 
     fun play() {
-        controller?.play()
+        controller?.let { ctrl ->
+            if (ctrl.playbackState == Player.STATE_ENDED) {
+                ctrl.seekTo(0)
+            }
+            ctrl.play()
+        }
     }
 
     fun pause() {
@@ -148,16 +154,23 @@ class MediaPlaybackService(context: Context) {
     private val Player.availableDuration: Long
         get() = duration.takeIf { it > 0 } ?: (currentPosition + totalBufferedDuration)
 
-    private fun Player.toState() = PlaybackState(
-        status = when {
-            isPlaying -> PlaybackStatus.PLAYING
-            playbackState == Player.STATE_READY -> PlaybackStatus.PAUSED
-            isLoading || playbackState == Player.STATE_BUFFERING -> PlaybackStatus.BUFFERING
-            playerError != null -> PlaybackStatus.ERROR
-            else -> PlaybackStatus.STOPPED
-        },
-        progress = if (availableDuration > 0) currentPosition.toFloat() / availableDuration.toFloat() else 0f,
-        positionMillis = currentPosition,
-        durationMillis = availableDuration
-    )
+    private fun Player.toState(): PlaybackState {
+        val isEnded = playbackState == Player.STATE_ENDED
+        val duration = availableDuration
+        val position = if (isEnded && duration > 0) duration else currentPosition
+        val progress = if (isEnded) 1f else if (duration > 0) position.toFloat() / duration.toFloat() else 0f
+
+        return PlaybackState(
+            status = when {
+                isPlaying -> PlaybackStatus.PLAYING
+                playbackState == Player.STATE_READY -> PlaybackStatus.PAUSED
+                isLoading || playbackState == Player.STATE_BUFFERING -> PlaybackStatus.BUFFERING
+                playerError != null -> PlaybackStatus.ERROR
+                else -> PlaybackStatus.STOPPED
+            },
+            progress = progress,
+            positionMillis = position,
+            durationMillis = duration
+        )
+    }
 }

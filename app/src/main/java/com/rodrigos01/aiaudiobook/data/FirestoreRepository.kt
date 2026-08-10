@@ -63,4 +63,41 @@ class FirestoreRepository(private val db: FirebaseFirestore = FirebaseFirestore.
             }
         awaitClose { registration.remove() }
     }.flowOn(Dispatchers.IO)
+
+    fun getChapterSections(chapterId: String): Flow<List<ChapterSection>> = callbackFlow {
+        val registration = db.collection("chapter_sections")
+            .whereEqualTo("chapter_id", chapterId)
+            .orderBy("section_index", Query.Direction.ASCENDING)
+            .addSnapshotListener { querySnapshot, exception ->
+                if (exception != null) {
+                    close(exception)
+                    return@addSnapshotListener
+                }
+                if (querySnapshot != null) {
+                    val sections = querySnapshot.documents.mapNotNull { doc ->
+                        doc.toObject(ChapterSection::class.java)?.copy(id = doc.id)
+                    }
+                    trySend(sections)
+                }
+            }
+        awaitClose { registration.remove() }
+    }.flowOn(Dispatchers.IO)
+
+    fun getChapterTotalDurationSeconds(chapterId: String): Flow<Double> = callbackFlow {
+        val registration = db.collection("chapter_sections")
+            .whereEqualTo("chapter_id", chapterId)
+            .addSnapshotListener { querySnapshot, exception ->
+                if (exception != null) {
+                    close(exception)
+                    return@addSnapshotListener
+                }
+                if (querySnapshot != null) {
+                    val totalDurationSeconds = querySnapshot.documents.sumOf { doc ->
+                        (doc.get("estimated_duration") as? Number)?.toDouble() ?: 0.0
+                    }
+                    trySend(totalDurationSeconds)
+                }
+            }
+        awaitClose { registration.remove() }
+    }.flowOn(Dispatchers.IO)
 }

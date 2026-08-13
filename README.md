@@ -69,20 +69,22 @@ from GitHub Actions secrets at build time. Add the following **repository secret
 
 | Secret name | Contents |
 | --- | --- |
-| `GOOGLE_SERVICES_JSON_BASE64` | Base64 of `app/google-services.json` |
-| `FIREBASE_APP_DISTRIBUTION_CREDENTIALS_BASE64` | Base64 of the Firebase service account JSON used by the App Distribution Gradle plugin (`app/ai-audio-book-2c2ff064ff10.json`) |
-| `RELEASE_KEYSTORE_BASE64` | Base64 of the release signing keystore (`app/ai-audio-book-keystore`) |
+| `GOOGLE_SERVICES_JSON` | Raw contents of `app/google-services.json` (plain text, paste as-is) |
+| `FIREBASE_APP_DISTRIBUTION_CREDENTIALS` | Raw contents of the Firebase service account JSON used by the App Distribution Gradle plugin (`app/ai-audio-book-2c2ff064ff10.json`, plain text, paste as-is) |
+| `RELEASE_KEYSTORE_BASE64` | Base64 of the release signing keystore (`app/ai-audio-book-keystore`) — this one is binary, so it must stay base64-encoded |
 | `RELEASE_STORE_PASSWORD` | Keystore password |
 | `RELEASE_KEY_ALIAS` | Signing key alias |
 | `RELEASE_KEY_PASSWORD` | Signing key password |
 
-To base64-encode a file locally:
+`GOOGLE_SERVICES_JSON` and `FIREBASE_APP_DISTRIBUTION_CREDENTIALS` are plain JSON text, so paste
+the file contents directly into the secret value box — no base64 needed. Only the keystore is
+binary and needs encoding:
 ```bash
-base64 -w0 path/to/file.json   # Linux
-base64 -i path/to/file.json | tr -d '\n'   # macOS
+base64 -w0 path/to/keystore   # Linux
+base64 -i path/to/keystore | tr -d '\n'   # macOS
 ```
 
-The `FIREBASE_APP_DISTRIBUTION_CREDENTIALS_BASE64` service account needs the **Firebase App
+The `FIREBASE_APP_DISTRIBUTION_CREDENTIALS` service account needs the **Firebase App
 Distribution Admin** role (or equivalent) on the `ai-audio-book` Firebase project, since the
 `app` module's `release` build type is configured to upload to the `devs` tester group via
 `firebaseAppDistribution { serviceCredentialsFile = "app/ai-audio-book-2c2ff064ff10.json" }`.

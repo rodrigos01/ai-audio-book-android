@@ -6,7 +6,6 @@ import android.net.Uri
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -35,18 +34,19 @@ class MediaPlaybackService(context: Context) {
     private var currentMediaUri: Uri? = null
 
     init {
-        val sessionToken = SessionToken(appContext, ComponentName(appContext, AudioPlaybackService::class.java))
+        val sessionToken =
+            SessionToken(appContext, ComponentName(appContext, AudioPlaybackService::class.java))
         val future = MediaController.Builder(appContext, sessionToken).buildAsync()
         controllerFuture = future
         future.addListener({
-            try {
-                val mediaController = future.get()
-                controller = mediaController
-                controllerState.value = mediaController
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }, ContextCompat.getMainExecutor(appContext))
+                               try {
+                                   val mediaController = future.get()
+                                   controller = mediaController
+                                   controllerState.value = mediaController
+                               } catch (e: Exception) {
+                                   e.printStackTrace()
+                               }
+                           }, ContextCompat.getMainExecutor(appContext))
     }
 
     fun playerState(): Flow<PlaybackState> = callbackFlow {
@@ -67,7 +67,7 @@ class MediaPlaybackService(context: Context) {
                     trySend(mediaController.toState())
 
                     while (isActive) {
-                        if (mediaController.isPlaying && mediaController.availableDuration > mediaController.currentPosition) {
+                        if (mediaController.isPlaying && mediaController.duration > mediaController.currentPosition) {
                             trySend(mediaController.toState())
                         }
                         delay(1000)
@@ -85,26 +85,15 @@ class MediaPlaybackService(context: Context) {
     }
 
     fun setMedia(
-        uri: Uri,
-        title: String? = null,
-        artist: String? = null,
-        mimeType: String = MimeTypes.AUDIO_MPEG,
-        playWhenReady: Boolean = true
+        uri: Uri, title: String? = null, artist: String? = null, playWhenReady: Boolean = true
     ) {
         val ctrl = controller
         if (currentMediaUri == uri && ctrl?.playbackState != Player.STATE_ENDED) return
         currentMediaUri = uri
 
-        val metadata = MediaMetadata.Builder()
-            .setTitle(title)
-            .setArtist(artist)
-            .build()
+        val metadata = MediaMetadata.Builder().setTitle(title).setArtist(artist).build()
 
-        val mediaItem = MediaItem.Builder()
-            .setUri(uri)
-            .setMimeType(mimeType)
-            .setMediaMetadata(metadata)
-            .build()
+        val mediaItem = MediaItem.Builder().setUri(uri).setMediaMetadata(metadata).build()
 
         val executeSetMedia = { targetCtrl: MediaController ->
             targetCtrl.playWhenReady = playWhenReady
@@ -135,10 +124,18 @@ class MediaPlaybackService(context: Context) {
 
     fun setPosition(position: Float) {
         controller?.let { ctrl ->
-            if (ctrl.availableDuration > 0) {
-                ctrl.seekTo((ctrl.availableDuration * position).toLong())
+            if (ctrl.duration > 0) {
+                ctrl.seekTo((ctrl.duration * position).toLong())
             }
         }
+    }
+
+    fun seekForward() {
+        controller?.seekForward()
+    }
+
+    fun seekBack() {
+        controller?.seekBack()
     }
 
     fun stop() {
@@ -151,14 +148,12 @@ class MediaPlaybackService(context: Context) {
         controllerState.value = null
     }
 
-    private val Player.availableDuration: Long
-        get() = duration.takeIf { it > 0 } ?: (currentPosition + totalBufferedDuration)
 
     private fun Player.toState(): PlaybackState {
         val isEnded = playbackState == Player.STATE_ENDED
-        val duration = availableDuration
         val position = if (isEnded && duration > 0) duration else currentPosition
-        val progress = if (isEnded) 1f else if (duration > 0) position.toFloat() / duration.toFloat() else 0f
+        val progress =
+            if (isEnded) 1f else if (duration > 0) position.toFloat() / duration.toFloat() else 0f
 
         return PlaybackState(
             status = when {
@@ -167,10 +162,7 @@ class MediaPlaybackService(context: Context) {
                 isLoading || playbackState == Player.STATE_BUFFERING -> PlaybackStatus.BUFFERING
                 playerError != null -> PlaybackStatus.ERROR
                 else -> PlaybackStatus.STOPPED
-            },
-            progress = progress,
-            positionMillis = position,
-            durationMillis = duration
+            }, progress = progress, positionMillis = position, durationMillis = duration
         )
     }
 }

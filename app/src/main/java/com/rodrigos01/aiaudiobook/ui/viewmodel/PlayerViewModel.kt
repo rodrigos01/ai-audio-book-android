@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.rodrigos01.aiaudiobook.BuildConfig
 import com.rodrigos01.aiaudiobook.common.media.MediaPlaybackService
 import com.rodrigos01.aiaudiobook.common.media.PlaybackStatus
 import com.rodrigos01.aiaudiobook.data.ApiRepository
@@ -25,8 +26,8 @@ data class PlayerUiState(
     val titleName: String?,
     val playbackStatus: PlaybackStatus,
     val playbackProgress: Float,
-    val positionString: String,
-    val durationString: String,
+    val position: Duration,
+    val duration: Duration,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -46,15 +47,14 @@ class PlayerViewModel(
             firestoreRepository.getChapterTotalDurationSeconds(chapter.id).map { durationSec ->
                 Triple(title, chapter, (durationSec * 1000).toLong())
             }
-        }
-        .onEach { (title, chapter, _) ->
+        }.onEach { (title, chapter, _) ->
             playbackService.setMedia(
-                uri = "https://ai-audio-book-api-883622140264.us-central1.run.app/api/chapters/${chapter.id}/stream".toUri(),
+                uri = "${BuildConfig.SERVER_URL}api/chapters/${chapter.id}/hls/playlist.m3u8".toUri(),
                 title = chapter.name,
                 artist = title?.name,
             )
         }.combine(playbackState) { (title, chapter, estimatedDurationMs), playerState ->
-            val totalDurationMs = if (estimatedDurationMs > 0) estimatedDurationMs else playerState.durationMillis
+            val totalDurationMs = playerState.durationMillis
             val progress = if (totalDurationMs > 0) {
                 (playerState.positionMillis.toFloat() / totalDurationMs.toFloat()).coerceIn(0f, 1f)
             } else 0f
@@ -64,13 +64,13 @@ class PlayerViewModel(
                 titleName = title?.name,
                 playbackStatus = playerState.status,
                 playbackProgress = progress,
-                positionString = playerState.positionMillis.milliseconds.toDurationString(),
-                durationString = totalDurationMs.milliseconds.toDurationString(),
+                position = playerState.positionMillis.milliseconds,
+                duration = totalDurationMs.milliseconds,
             )
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(),
-            PlayerUiState("", "", PlaybackStatus.STOPPED, 0F, "", "")
+            PlayerUiState("", "", PlaybackStatus.STOPPED, 0F, 0.milliseconds, 0.milliseconds)
         )
 
     fun onPlayPause() {
@@ -86,13 +86,16 @@ class PlayerViewModel(
         playbackService.setPosition(position)
     }
 
-    fun Duration.toDurationString() = toComponents { hours, minutes, seconds, _ ->
-        StringBuilder().apply {
-            if (hours > 0) {
-                append("${hours}:")
-            }
-            append("$minutes:${seconds.toString().padStart(2, '0')}")
-        }.toString()
+    fun onPrevious() {
+        playbackService.seekBack()
+    }
+
+    fun onNext() {
+        playbackService.seekForward()
+    }
+
+    fun onExit() {
+        playbackService.stop()
     }
 
     companion object {

@@ -2,6 +2,7 @@ package com.rodrigos01.aiaudiobook.data
 
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
+import com.rodrigos01.aiaudiobook.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -149,7 +150,7 @@ interface AIAudioBookApiService {
 }
 
 class ApiRepository(
-    private val baseUrl: String = "https://ai-audio-book-api-883622140264.us-central1.run.app",
+    private val baseUrl: String = BuildConfig.SERVER_URL,
     private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
 ) {
     private val json = Json {

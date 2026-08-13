@@ -51,6 +51,17 @@ android {
             }
         }
     }
+    flavorDimensions += "environment"
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            buildConfigField("String", "SERVER_URL", "\"http://10.0.2.2:3005/\"")
+        }
+        create("prod") {
+            dimension = "environment"
+            buildConfigField("String", "SERVER_URL", "\"https://ai-audio-book-api-883622140264.us-central1.run.app/\"")
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -58,7 +69,7 @@ android {
     buildFeatures {
       compose = true
       aidl = false
-      buildConfig = false
+      buildConfig = true
       shaders = false
     }
 
@@ -133,5 +144,6 @@ dependencies {
   // Media3 ExoPlayer
   implementation(libs.androidx.media3.exoplayer)
   implementation(libs.androidx.media3.session)
+  implementation(libs.androidx.media3.hls)
   implementation(libs.androidx.media3.ui.compose)
 }

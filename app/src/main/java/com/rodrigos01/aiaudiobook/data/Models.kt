@@ -20,6 +20,7 @@ data class Chapter(
     val content: String = "",
     val voice_id: String = "",
     val is_ssml: Boolean = false,
+    val ai_casting_status: String? = null,
     val created_at: Timestamp? = null
 )
 

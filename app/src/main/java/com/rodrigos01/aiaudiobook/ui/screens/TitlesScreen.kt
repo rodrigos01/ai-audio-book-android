@@ -18,18 +18,24 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -41,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,16 +57,17 @@ import com.rodrigos01.aiaudiobook.theme.AccentGreen
 import com.rodrigos01.aiaudiobook.theme.BorderColor
 import com.rodrigos01.aiaudiobook.theme.CardBackground
 import com.rodrigos01.aiaudiobook.theme.DarkBackground
+import com.rodrigos01.aiaudiobook.theme.DarkSurface
 import com.rodrigos01.aiaudiobook.theme.Indigo500
 import com.rodrigos01.aiaudiobook.theme.Pink500
 import com.rodrigos01.aiaudiobook.theme.TextPrimary
 import com.rodrigos01.aiaudiobook.theme.TextSecondary
 import com.rodrigos01.aiaudiobook.theme.Typography
 import com.rodrigos01.aiaudiobook.theme.Violet500
+import com.rodrigos01.aiaudiobook.ui.components.TitleBottomSheet
 import com.rodrigos01.aiaudiobook.ui.viewmodel.AuthViewModel
 import com.rodrigos01.aiaudiobook.ui.viewmodel.TitlesUiState
 import com.rodrigos01.aiaudiobook.ui.viewmodel.TitlesViewModel
-import androidx.compose.ui.platform.LocalContext
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -74,6 +82,12 @@ fun TitlesScreen(
     val context = LocalContext.current
     val currentUser = authViewModel.currentUser
     val titlesState by titlesViewModel.uiState.collectAsState()
+
+    val isBottomSheetOpen by titlesViewModel.isBottomSheetOpen.collectAsState()
+    val editingTitle by titlesViewModel.editingTitle.collectAsState()
+    val isSubmitting by titlesViewModel.isSubmitting.collectAsState()
+    val actionError by titlesViewModel.actionError.collectAsState()
+    val titleToDelete by titlesViewModel.titleToDelete.collectAsState()
 
     // Fetch titles when screen is first loaded
     LaunchedEffect(currentUser) {
@@ -107,6 +121,19 @@ fun TitlesScreen(
                     titleContentColor = TextPrimary
                 )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { titlesViewModel.showCreateBottomSheet() },
+                containerColor = Indigo500,
+                contentColor = Color.White,
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add New Title"
+                )
+            }
         },
         containerColor = DarkBackground,
         modifier = modifier
@@ -179,7 +206,7 @@ fun TitlesScreen(
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
                             Text(
-                                text = "Any projects associated with user ID user:${currentUser?.uid ?: ""} will appear here.",
+                                text = "Tap the '+' button below to create your first audiobook project.",
                                 color = TextSecondary.copy(alpha = 0.7f),
                                 style = Typography.bodyMedium,
                                 modifier = Modifier.padding(horizontal = 16.dp),
@@ -192,14 +219,77 @@ fun TitlesScreen(
                                 .fillMaxSize()
                                 .padding(horizontal = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
-                            contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
                         ) {
                             items(titles) { title ->
-                                TitleCard(title = title, onClick = { onTitleClick(title) })
+                                TitleCard(
+                                    title = title,
+                                    onClick = { onTitleClick(title) },
+                                    onEditClick = { titlesViewModel.showEditBottomSheet(title) },
+                                    onDeleteClick = { titlesViewModel.showDeleteConfirmation(title) }
+                                )
                             }
                         }
                     }
                 }
+            }
+
+            // BottomSheet for creation / editing
+            if (isBottomSheetOpen) {
+                TitleBottomSheet(
+                    editingTitle = editingTitle,
+                    onDismiss = { titlesViewModel.dismissBottomSheet() },
+                    onSubmit = { name, aiCastingEnabled ->
+                        if (editingTitle != null) {
+                            titlesViewModel.updateTitle(editingTitle!!.id, name)
+                        } else {
+                            titlesViewModel.createTitle(name, aiCastingEnabled)
+                        }
+                    },
+                    isSubmitting = isSubmitting,
+                    errorMessage = actionError
+                )
+            }
+
+            // Delete confirmation dialog
+            titleToDelete?.let { title ->
+                AlertDialog(
+                    onDismissRequest = { titlesViewModel.dismissDeleteConfirmation() },
+                    title = {
+                        Text(
+                            text = "Delete Audiobook?",
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = "Are you sure you want to delete \"${title.name}\"? This action cannot be undone.",
+                            color = TextSecondary
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = { titlesViewModel.deleteTitle(title.id) },
+                            enabled = !isSubmitting
+                        ) {
+                            Text(
+                                text = if (isSubmitting) "Deleting..." else "Delete",
+                                color = Pink500,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { titlesViewModel.dismissDeleteConfirmation() },
+                            enabled = !isSubmitting
+                        ) {
+                            Text("Cancel", color = TextSecondary)
+                        }
+                    },
+                    containerColor = DarkSurface
+                )
             }
         }
     }
@@ -208,7 +298,9 @@ fun TitlesScreen(
 @Composable
 fun TitleCard(
     title: Title,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -241,23 +333,52 @@ fun TitleCard(
                     modifier = Modifier.weight(1f)
                 )
 
-                // Casting Mode Indicator Badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            if (title.ai_casting_enabled) AccentGreen.copy(alpha = 0.15f)
-                            else TextSecondary.copy(alpha = 0.15f)
-                        )
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text(
-                        text = if (title.ai_casting_enabled) "AI Casting" else "Solo Voice",
-                        color = if (title.ai_casting_enabled) AccentGreen else TextSecondary,
-                        style = Typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 11.sp
-                    )
+                    // Casting Mode Indicator Badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (title.ai_casting_enabled) AccentGreen.copy(alpha = 0.15f)
+                                else TextSecondary.copy(alpha = 0.15f)
+                            )
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (title.ai_casting_enabled) "AI Casting" else "Solo Voice",
+                            color = if (title.ai_casting_enabled) AccentGreen else TextSecondary,
+                            style = Typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.sp
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onEditClick,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Title",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onDeleteClick,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete Title",
+                            tint = Pink500.copy(alpha = 0.8f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 
@@ -279,7 +400,7 @@ fun TitleCard(
                 )
             }
 
-            // Date and count
+            // Date
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -302,3 +423,4 @@ private fun formatTimestamp(timestamp: Timestamp?): String {
     val sdf = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
     return sdf.format(date)
 }
+

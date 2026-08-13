@@ -79,6 +79,7 @@ data class ChapterResponse(
     val content: String,
     val voice_id: String,
     val is_ssml: Boolean,
+    val ai_casting_status: String? = null,
     val created_at: String? = null
 )
 

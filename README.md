@@ -54,3 +54,35 @@ Before trying to log in or register, ensure the following are enabled in the Fir
 ## 4. Firestore Database Setup
 Make sure the Cloud Firestore database is created in the same Firebase project.
 The Security Rules must match the specs in `docs/firestore_schema.md` to allow read operations for authenticated users (`user:<firebase-uid>`).
+
+---
+
+## 5. CI/CD: Build & Distribute on Merge to `master`
+
+The workflow at `.github/workflows/release-prod.yml` builds the `prod` release flavor and
+uploads it to Firebase App Distribution every time a commit is pushed/merged to `master`
+(it can also be run manually via **Actions > Build and Distribute (Prod) > Run workflow**).
+
+None of the required credential files are committed to the repo, so the workflow writes them
+from GitHub Actions secrets at build time. Add the following **repository secrets**
+(**Settings > Secrets and variables > Actions > New repository secret**):
+
+| Secret name | Contents |
+| --- | --- |
+| `GOOGLE_SERVICES_JSON_BASE64` | Base64 of `app/google-services.json` |
+| `FIREBASE_APP_DISTRIBUTION_CREDENTIALS_BASE64` | Base64 of the Firebase service account JSON used by the App Distribution Gradle plugin (`app/ai-audio-book-2c2ff064ff10.json`) |
+| `RELEASE_KEYSTORE_BASE64` | Base64 of the release signing keystore (`app/ai-audio-book-keystore`) |
+| `RELEASE_STORE_PASSWORD` | Keystore password |
+| `RELEASE_KEY_ALIAS` | Signing key alias |
+| `RELEASE_KEY_PASSWORD` | Signing key password |
+
+To base64-encode a file locally:
+```bash
+base64 -w0 path/to/file.json   # Linux
+base64 -i path/to/file.json | tr -d '\n'   # macOS
+```
+
+The `FIREBASE_APP_DISTRIBUTION_CREDENTIALS_BASE64` service account needs the **Firebase App
+Distribution Admin** role (or equivalent) on the `ai-audio-book` Firebase project, since the
+`app` module's `release` build type is configured to upload to the `devs` tester group via
+`firebaseAppDistribution { serviceCredentialsFile = "app/ai-audio-book-2c2ff064ff10.json" }`.

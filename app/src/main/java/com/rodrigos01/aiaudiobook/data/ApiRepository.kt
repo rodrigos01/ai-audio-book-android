@@ -99,6 +99,13 @@ data class CastChapterResponse(
 )
 
 @Serializable
+data class PrepareChapterResponse(
+    val totalSections: Int,
+    val generatedSections: Int,
+    val ready: Boolean
+)
+
+@Serializable
 data class FetchGoogleDocRequest(
     val documentId: String,
     val googleAccessToken: String
@@ -137,6 +144,9 @@ interface AIAudioBookApiService {
 
     @POST("api/chapters/{chapterId}/cast")
     suspend fun castChapter(@Path("chapterId") chapterId: String): CastChapterResponse
+
+    @POST("api/chapters/{chapterId}/prepare")
+    suspend fun prepareChapter(@Path("chapterId") chapterId: String): PrepareChapterResponse
 
     @Streaming
     @GET("api/chapters/{chapterId}/stream")
@@ -245,6 +255,10 @@ class ApiRepository(
 
     suspend fun castChapter(chapterId: String): Result<CastChapterResponse> = runCatching {
         apiService.castChapter(chapterId)
+    }
+
+    suspend fun prepareChapter(chapterId: String): Result<PrepareChapterResponse> = runCatching {
+        apiService.prepareChapter(chapterId)
     }
 
     fun streamChapter(

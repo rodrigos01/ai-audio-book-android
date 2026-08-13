@@ -2,9 +2,12 @@ package com.rodrigos01.aiaudiobook.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.rodrigos01.aiaudiobook.data.ApiRepository
 import com.rodrigos01.aiaudiobook.data.FirestoreRepository
 import com.rodrigos01.aiaudiobook.data.Title
+import com.rodrigos01.aiaudiobook.data.offline.OfflineDownloadRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -17,6 +20,7 @@ sealed interface TitlesUiState {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TitlesViewModel(
+    private val offlineDownloadRepository: OfflineDownloadRepository,
     private val firestoreRepository: FirestoreRepository = FirestoreRepository(),
     private val apiRepository: ApiRepository = ApiRepository()
 ) : ViewModel() {
@@ -113,12 +117,25 @@ class TitlesViewModel(
     fun deleteTitle(id: String) {
         viewModelScope.launch {
             isSubmitting.value = true
+            // Capture chapter ids before the title (and its chapters) are gone server-side, so
+            // any offline downloads for them can be cleaned up too.
+            val chapterIds = runCatching { firestoreRepository.getChapters(id).first().map { it.id } }
+                .getOrDefault(emptyList())
             val result = apiRepository.deleteTitle(id)
             isSubmitting.value = false
             result.onSuccess {
+                chapterIds.forEach { chapterId -> offlineDownloadRepository.deleteDownload(chapterId) }
                 dismissDeleteConfirmation()
             }.onFailure { error ->
                 actionError.value = error.localizedMessage ?: "Failed to delete title"
+            }
+        }
+    }
+
+    companion object {
+        fun Factory(offlineDownloadRepository: OfflineDownloadRepository) = viewModelFactory {
+            initializer {
+                TitlesViewModel(offlineDownloadRepository = offlineDownloadRepository)
             }
         }
     }

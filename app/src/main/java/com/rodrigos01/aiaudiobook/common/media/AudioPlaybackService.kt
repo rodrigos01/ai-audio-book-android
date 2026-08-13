@@ -2,6 +2,7 @@ package com.rodrigos01.aiaudiobook.common.media
 
 import android.app.PendingIntent
 import android.content.Intent
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
@@ -21,8 +22,12 @@ class AudioPlaybackService : MediaSessionService() {
             .setReadTimeoutMs(30_000)
             .setAllowCrossProtocolRedirects(true)
 
+        // Wrap the HTTP factory so file:// URIs (downloaded chapters played offline) are also
+        // resolved correctly instead of being routed through the HTTP data source.
+        val dataSourceFactory = DefaultDataSource.Factory(this, httpDataSourceFactory)
+
         val mediaSourceFactory = DefaultMediaSourceFactory(this)
-            .setDataSourceFactory(httpDataSourceFactory)
+            .setDataSourceFactory(dataSourceFactory)
 
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(

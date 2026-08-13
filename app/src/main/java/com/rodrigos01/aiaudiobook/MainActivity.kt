@@ -31,6 +31,7 @@ import androidx.navigation.toRoute
 import com.google.firebase.FirebaseApp
 import com.rodrigos01.aiaudiobook.common.media.MediaPlaybackService
 import com.rodrigos01.aiaudiobook.data.Title
+import com.rodrigos01.aiaudiobook.data.offline.OfflineDownloadRepository
 import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
 import com.rodrigos01.aiaudiobook.ui.screens.ChaptersScreen
 import com.rodrigos01.aiaudiobook.ui.screens.LoginScreen
@@ -60,9 +61,15 @@ sealed interface Route {
 
 class MainActivity : ComponentActivity() {
 
+    private val offlineDownloadRepository by lazy { OfflineDownloadRepository(this) }
+
     private val authViewModel: AuthViewModel by viewModels()
-    private val titlesViewModel: TitlesViewModel by viewModels()
-    private val chaptersViewModel: ChaptersViewModel by viewModels()
+    private val titlesViewModel: TitlesViewModel by viewModels {
+        TitlesViewModel.Factory(offlineDownloadRepository)
+    }
+    private val chaptersViewModel: ChaptersViewModel by viewModels {
+        ChaptersViewModel.Factory(offlineDownloadRepository)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -172,7 +179,7 @@ class MainActivity : ComponentActivity() {
                             val route = backStackEntry.toRoute<Route.Player>()
                             val viewModel: PlayerViewModel = viewModel(
                                 factory = PlayerViewModel.Factory(
-                                    route.titleId, route.chapterId, playbackService,
+                                    route.titleId, route.chapterId, playbackService, offlineDownloadRepository,
                                 )
                             )
                             val uiState by viewModel.uiState.collectAsStateWithLifecycle()

@@ -37,7 +37,8 @@ data class Voice(
 @Serializable
 data class CreateTitleRequest(
     val name: String,
-    val ai_casting_enabled: Boolean
+    val ai_casting_enabled: Boolean,
+    val tts_tier: String
 )
 
 @Serializable
@@ -46,6 +47,7 @@ data class TitleResponse(
     val name: String,
     val owner_id: String? = null,
     val ai_casting_enabled: Boolean = false,
+    val tts_tier: String? = null,
     val casting_map: Map<String, String> = emptyMap(),
     val narrator_voice: String? = null,
     val created_at: String? = null
@@ -214,8 +216,12 @@ class ApiRepository(
         apiService.getVoices()
     }
 
-    suspend fun createTitle(name: String, aiCastingEnabled: Boolean): Result<TitleResponse> = runCatching {
-        apiService.createTitle(CreateTitleRequest(name, aiCastingEnabled))
+    suspend fun createTitle(
+        name: String,
+        aiCastingEnabled: Boolean,
+        ttsTier: String
+    ): Result<TitleResponse> = runCatching {
+        apiService.createTitle(CreateTitleRequest(name, aiCastingEnabled, ttsTier))
     }
 
     suspend fun updateTitle(

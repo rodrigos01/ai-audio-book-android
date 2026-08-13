@@ -86,11 +86,15 @@ class TitlesViewModel(
         titleToDelete.value = null
     }
 
-    fun createTitle(name: String, aiCastingEnabled: Boolean) {
+    fun createTitle(name: String, aiCastingEnabled: Boolean, ttsTier: String) {
         viewModelScope.launch {
             isSubmitting.value = true
             actionError.value = null
-            val result = apiRepository.createTitle(name = name, aiCastingEnabled = aiCastingEnabled)
+            val result = apiRepository.createTitle(
+                name = name,
+                aiCastingEnabled = aiCastingEnabled,
+                ttsTier = ttsTier
+            )
             isSubmitting.value = false
             result.onSuccess {
                 dismissBottomSheet()

@@ -239,11 +239,11 @@ fun TitlesScreen(
                 TitleBottomSheet(
                     editingTitle = editingTitle,
                     onDismiss = { titlesViewModel.dismissBottomSheet() },
-                    onSubmit = { name, aiCastingEnabled ->
+                    onSubmit = { name, aiCastingEnabled, ttsTier ->
                         if (editingTitle != null) {
                             titlesViewModel.updateTitle(editingTitle!!.id, name)
                         } else {
-                            titlesViewModel.createTitle(name, aiCastingEnabled)
+                            titlesViewModel.createTitle(name, aiCastingEnabled, ttsTier)
                         }
                     },
                     isSubmitting = isSubmitting,

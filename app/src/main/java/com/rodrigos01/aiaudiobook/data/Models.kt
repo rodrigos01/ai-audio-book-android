@@ -7,6 +7,7 @@ data class Title(
     val name: String = "",
     val owner_id: String = "",
     val ai_casting_enabled: Boolean = false,
+    val tts_tier: String = "basic",
     val casting_map: Map<String, String> = emptyMap(),
     val narrator_voice: String? = null,
     val created_at: Timestamp? = null

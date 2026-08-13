@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.rodrigos01.aiaudiobook.data.ApiRepository
 import com.rodrigos01.aiaudiobook.data.Chapter
 import com.rodrigos01.aiaudiobook.data.FirestoreRepository
+import com.rodrigos01.aiaudiobook.data.Title
 import com.rodrigos01.aiaudiobook.data.Voice
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -24,6 +25,22 @@ class ChaptersViewModel(
 ) : ViewModel() {
 
     private val _titleId = MutableStateFlow<String?>(null)
+
+    // Observes the full Title document from Firestore, since navigation only carries the
+    // title id/name and would otherwise leave fields like ai_casting_enabled at their defaults.
+    val title: StateFlow<Title?> = _titleId
+        .flatMapLatest { titleId ->
+            if (titleId == null) {
+                flowOf<Title?>(null)
+            } else {
+                firestoreRepository.getTitle(titleId)
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
 
     val uiState: StateFlow<ChaptersUiState> = _titleId
         .flatMapLatest { titleId ->

@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
@@ -81,6 +82,10 @@ fun ChaptersScreen(
 ) {
     val context = LocalContext.current
     val chaptersState by chaptersViewModel.uiState.collectAsState()
+    val observedTitle by chaptersViewModel.title.collectAsState()
+    // Navigation only carries the title id/name, so fall back to the stub until the full
+    // Firestore document (ai_casting_enabled, casting_map, etc.) has loaded.
+    val title = observedTitle ?: title
 
     val isBottomSheetOpen by chaptersViewModel.isBottomSheetOpen.collectAsState()
     val editingChapter by chaptersViewModel.editingChapter.collectAsState()
@@ -367,7 +372,7 @@ fun ChapterItemCard(
                 if (aiCastingEnabled) {
                     val (badgeText, badgeColor) = when (chapter.ai_casting_status) {
                         "completed" -> "Ready" to AccentGreen
-                        "in_progress" -> "In Progress" to AccentOrange
+                        "in_progress" -> "Casting..." to AccentOrange
                         "failed" -> "Casting Failed" to Pink500
                         else -> "Pending" to TextSecondary
                     }
@@ -377,13 +382,32 @@ fun ChapterItemCard(
                             .background(badgeColor.copy(alpha = 0.15f))
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
-                        Text(
-                            text = badgeText,
-                            color = badgeColor,
-                            style = Typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 10.sp
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            when (chapter.ai_casting_status) {
+                                "completed" -> Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Casting complete",
+                                    tint = badgeColor,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                "in_progress" -> CircularProgressIndicator(
+                                    modifier = Modifier.size(11.dp),
+                                    color = badgeColor,
+                                    strokeWidth = 1.5.dp
+                                )
+                                else -> {}
+                            }
+                            Text(
+                                text = badgeText,
+                                color = badgeColor,
+                                style = Typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 10.sp
+                            )
+                        }
                     }
                 } else if (chapter.is_ssml) {
                     Box(

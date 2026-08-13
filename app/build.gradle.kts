@@ -15,6 +15,14 @@ if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
 
+fun gitShortHash(): String {
+    val output = providers.exec {
+        commandLine("git", "rev-parse", "--short", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim()
+    return output.ifBlank { "unknown" }
+}
+
 android {
     namespace = "com.rodrigos01.aiaudiobook"
     compileSdk = 36
@@ -33,7 +41,7 @@ android {
         minSdk = 24
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0-7"
+        versionName = "1.0-${gitShortHash()}"
     }
 
     buildTypes {

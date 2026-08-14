@@ -280,11 +280,18 @@ fun ChaptersScreen(
                     voices = voices,
                     isLoadingVoices = isLoadingVoices,
                     onDismiss = { chaptersViewModel.dismissBottomSheet() },
-                    onSubmit = { name, content, voiceId ->
+                    onSubmit = { name, content, voiceId, googleDocId, googleAccessToken ->
                         if (editingChapter != null) {
                             chaptersViewModel.updateChapter(editingChapter!!.id, name, content)
                         } else {
-                            chaptersViewModel.createChapter(title.id, name, content, voiceId)
+                            chaptersViewModel.createChapter(
+                                titleId = title.id,
+                                name = name,
+                                content = content,
+                                voiceId = voiceId,
+                                googleDocId = googleDocId,
+                                googleAccessToken = googleAccessToken
+                            )
                         }
                     },
                     isSubmitting = isSubmitting,

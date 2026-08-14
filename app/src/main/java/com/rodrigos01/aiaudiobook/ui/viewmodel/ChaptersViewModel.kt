@@ -181,15 +181,45 @@ class ChaptersViewModel(
         }
     }
 
-    fun createChapter(titleId: String, name: String, content: String, voiceId: String) {
+    var isFetchingDoc = MutableStateFlow(false)
+        private set
+
+    fun fetchGoogleDoc(
+        documentId: String,
+        googleAccessToken: String,
+        onSuccess: (title: String, content: String) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            isFetchingDoc.value = true
+            val result = apiRepository.fetchGoogleDoc(documentId, googleAccessToken)
+            isFetchingDoc.value = false
+            result.onSuccess { res ->
+                onSuccess(res.title, res.content)
+            }.onFailure { err ->
+                onError(err.localizedMessage ?: "Failed to fetch Google Doc content.")
+            }
+        }
+    }
+
+    fun createChapter(
+        titleId: String,
+        name: String,
+        content: String,
+        voiceId: String,
+        googleDocId: String? = null,
+        googleAccessToken: String? = null
+    ) {
         viewModelScope.launch {
             isSubmitting.value = true
             actionError.value = null
             val result = apiRepository.createChapter(
                 titleId = titleId,
-                name = name,
-                content = content,
-                voiceId = voiceId
+                name = name.ifBlank { null },
+                content = content.ifBlank { null },
+                voiceId = voiceId.ifBlank { null },
+                googleDocId = googleDocId,
+                googleAccessToken = googleAccessToken
             )
             isSubmitting.value = false
             result.onSuccess {

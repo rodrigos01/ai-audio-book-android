@@ -67,9 +67,11 @@ data class GenericSuccessResponse(
 
 @Serializable
 data class CreateChapterRequest(
-    val name: String,
-    val content: String,
-    val voice_id: String
+    val name: String? = null,
+    val content: String? = null,
+    val voice_id: String? = null,
+    val google_doc_id: String? = null,
+    val google_access_token: String? = null
 )
 
 @Serializable
@@ -239,11 +241,22 @@ class ApiRepository(
 
     suspend fun createChapter(
         titleId: String,
-        name: String,
-        content: String,
-        voiceId: String
+        name: String? = null,
+        content: String? = null,
+        voiceId: String? = null,
+        googleDocId: String? = null,
+        googleAccessToken: String? = null
     ): Result<ChapterResponse> = runCatching {
-        apiService.createChapter(titleId, CreateChapterRequest(name, content, voiceId))
+        apiService.createChapter(
+            titleId,
+            CreateChapterRequest(
+                name = name,
+                content = content,
+                voice_id = voiceId,
+                google_doc_id = googleDocId,
+                google_access_token = googleAccessToken
+            )
+        )
     }
 
     suspend fun updateChapter(

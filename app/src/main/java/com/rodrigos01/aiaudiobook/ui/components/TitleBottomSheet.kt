@@ -18,7 +18,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SheetState
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -48,7 +51,7 @@ import com.rodrigos01.aiaudiobook.theme.Typography
 fun TitleBottomSheet(
     editingTitle: Title?,
     onDismiss: () -> Unit,
-    onSubmit: (name: String, aiCastingEnabled: Boolean) -> Unit,
+    onSubmit: (name: String, aiCastingEnabled: Boolean, ttsTier: String) -> Unit,
     isSubmitting: Boolean,
     errorMessage: String? = null,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -58,6 +61,9 @@ fun TitleBottomSheet(
     var name by remember(editingTitle) { mutableStateOf(editingTitle?.name ?: "") }
     var aiCastingEnabled by remember(editingTitle) {
         mutableStateOf(editingTitle?.ai_casting_enabled ?: false)
+    }
+    var ttsTier by remember(editingTitle) {
+        mutableStateOf(editingTitle?.tts_tier ?: "basic")
     }
 
     ModalBottomSheet(
@@ -135,12 +141,50 @@ fun TitleBottomSheet(
                 }
             }
 
+            // Voice quality tier (only editable during creation)
+            if (!isEditMode) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Voice Quality",
+                        style = Typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
+                    )
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        SegmentedButton(
+                            selected = ttsTier == "basic",
+                            onClick = { ttsTier = "basic" },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            colors = SegmentedButtonDefaults.colors(
+                                activeContainerColor = Indigo500,
+                                activeContentColor = Color.White,
+                                inactiveContentColor = TextSecondary
+                            )
+                        ) {
+                            Text("Basic")
+                        }
+                        SegmentedButton(
+                            selected = ttsTier == "pro",
+                            onClick = { ttsTier = "pro" },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            colors = SegmentedButtonDefaults.colors(
+                                activeContainerColor = Indigo500,
+                                activeContentColor = Color.White,
+                                inactiveContentColor = TextSecondary
+                            )
+                        ) {
+                            Text("Pro")
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(
                 onClick = {
                     if (name.isNotBlank() && !isSubmitting) {
-                        onSubmit(name.trim(), aiCastingEnabled)
+                        onSubmit(name.trim(), aiCastingEnabled, ttsTier)
                     }
                 },
                 enabled = name.isNotBlank() && !isSubmitting,

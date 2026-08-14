@@ -20,8 +20,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -52,8 +56,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rodrigos01.aiaudiobook.common.network.NetworkMonitor
 import com.rodrigos01.aiaudiobook.data.Chapter
 import com.rodrigos01.aiaudiobook.data.Title
+import com.rodrigos01.aiaudiobook.data.offline.ChapterDownloadState
 import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
 import com.rodrigos01.aiaudiobook.theme.AccentGreen
 import com.rodrigos01.aiaudiobook.theme.AccentOrange
@@ -81,6 +87,10 @@ fun ChaptersScreen(
 ) {
     val context = LocalContext.current
     val chaptersState by chaptersViewModel.uiState.collectAsState()
+    val observedTitle by chaptersViewModel.title.collectAsState()
+    // Navigation only carries the title id/name, so fall back to the stub until the full
+    // Firestore document (ai_casting_enabled, casting_map, etc.) has loaded.
+    val title = observedTitle ?: title
 
     val isBottomSheetOpen by chaptersViewModel.isBottomSheetOpen.collectAsState()
     val editingChapter by chaptersViewModel.editingChapter.collectAsState()
@@ -90,6 +100,9 @@ fun ChaptersScreen(
 
     val voices by chaptersViewModel.voices.collectAsState()
     val isLoadingVoices by chaptersViewModel.isLoadingVoices.collectAsState()
+
+    val downloadStates by chaptersViewModel.downloadStates.collectAsState()
+    val pendingMeteredDownloadChapter by chaptersViewModel.pendingMeteredDownloadChapter.collectAsState()
 
     // Fetch chapters when screen is loaded
     LaunchedEffect(title.id) {
@@ -233,6 +246,7 @@ fun ChaptersScreen(
                                 ChapterItemCard(
                                     chapter = chapter,
                                     aiCastingEnabled = title.ai_casting_enabled,
+                                    downloadState = downloadStates[chapter.id] ?: ChapterDownloadState.NotDownloaded,
                                     onClick = {
                                         if (title.ai_casting_enabled && chapter.ai_casting_status != "completed") {
                                             val statusMsg = when (chapter.ai_casting_status) {
@@ -246,7 +260,11 @@ fun ChaptersScreen(
                                         }
                                     },
                                     onEditClick = { chaptersViewModel.showEditBottomSheet(chapter) },
-                                    onDeleteClick = { chaptersViewModel.showDeleteConfirmation(chapter) }
+                                    onDeleteClick = { chaptersViewModel.showDeleteConfirmation(chapter) },
+                                    onDownloadClick = {
+                                        chaptersViewModel.requestDownload(chapter, NetworkMonitor.isOnWifi(context))
+                                    },
+                                    onDeleteDownloadClick = { chaptersViewModel.deleteDownload(chapter.id) }
                                 )
                             }
                         }
@@ -314,6 +332,37 @@ fun ChaptersScreen(
                     containerColor = DarkSurface
                 )
             }
+
+            // Confirmation before downloading over mobile data
+            pendingMeteredDownloadChapter?.let { chapter ->
+                AlertDialog(
+                    onDismissRequest = { chaptersViewModel.dismissMeteredDownloadConfirmation() },
+                    title = {
+                        Text(
+                            text = "Not on Wi-Fi",
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = "You're not connected to Wi-Fi. Download \"${chapter.name ?: "this chapter"}\" using mobile data?",
+                            color = TextSecondary
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { chaptersViewModel.confirmMeteredDownload() }) {
+                            Text("Download", color = Indigo500, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { chaptersViewModel.dismissMeteredDownloadConfirmation() }) {
+                            Text("Cancel", color = TextSecondary)
+                        }
+                    },
+                    containerColor = DarkSurface
+                )
+            }
         }
     }
 }
@@ -322,9 +371,12 @@ fun ChaptersScreen(
 fun ChapterItemCard(
     chapter: Chapter,
     aiCastingEnabled: Boolean = false,
+    downloadState: ChapterDownloadState = ChapterDownloadState.NotDownloaded,
     onClick: () -> Unit,
     onEditClick: () -> Unit = {},
     onDeleteClick: () -> Unit = {},
+    onDownloadClick: () -> Unit = {},
+    onDeleteDownloadClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -367,7 +419,7 @@ fun ChapterItemCard(
                 if (aiCastingEnabled) {
                     val (badgeText, badgeColor) = when (chapter.ai_casting_status) {
                         "completed" -> "Ready" to AccentGreen
-                        "in_progress" -> "In Progress" to AccentOrange
+                        "in_progress" -> "Casting..." to AccentOrange
                         "failed" -> "Casting Failed" to Pink500
                         else -> "Pending" to TextSecondary
                     }
@@ -377,13 +429,32 @@ fun ChapterItemCard(
                             .background(badgeColor.copy(alpha = 0.15f))
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
-                        Text(
-                            text = badgeText,
-                            color = badgeColor,
-                            style = Typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 10.sp
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            when (chapter.ai_casting_status) {
+                                "completed" -> Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Casting complete",
+                                    tint = badgeColor,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                "in_progress" -> CircularProgressIndicator(
+                                    modifier = Modifier.size(11.dp),
+                                    color = badgeColor,
+                                    strokeWidth = 1.5.dp
+                                )
+                                else -> {}
+                            }
+                            Text(
+                                text = badgeText,
+                                color = badgeColor,
+                                style = Typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 10.sp
+                            )
+                        }
                     }
                 } else if (chapter.is_ssml) {
                     Box(
@@ -401,6 +472,12 @@ fun ChapterItemCard(
                         )
                     }
                 }
+
+                DownloadButton(
+                    downloadState = downloadState,
+                    onDownloadClick = onDownloadClick,
+                    onDeleteDownloadClick = onDeleteDownloadClick
+                )
 
                 IconButton(
                     onClick = onEditClick,
@@ -426,6 +503,54 @@ fun ChapterItemCard(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun DownloadButton(
+    downloadState: ChapterDownloadState,
+    onDownloadClick: () -> Unit,
+    onDeleteDownloadClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    IconButton(
+        onClick = {
+            when (downloadState) {
+                is ChapterDownloadState.NotDownloaded, is ChapterDownloadState.Failed -> onDownloadClick()
+                is ChapterDownloadState.Downloaded -> onDeleteDownloadClick()
+                is ChapterDownloadState.Preparing, is ChapterDownloadState.Downloading -> Unit
+            }
+        },
+        modifier = modifier.size(32.dp)
+    ) {
+        when (downloadState) {
+            is ChapterDownloadState.NotDownloaded -> Icon(
+                imageVector = Icons.Default.Download,
+                contentDescription = "Download for offline listening",
+                tint = TextSecondary,
+                modifier = Modifier.size(18.dp)
+            )
+
+            is ChapterDownloadState.Preparing, is ChapterDownloadState.Downloading -> CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                color = Indigo500,
+                strokeWidth = 2.dp
+            )
+
+            is ChapterDownloadState.Downloaded -> Icon(
+                imageVector = Icons.Default.DownloadDone,
+                contentDescription = "Downloaded for offline listening, tap to remove",
+                tint = AccentGreen,
+                modifier = Modifier.size(18.dp)
+            )
+
+            is ChapterDownloadState.Failed -> Icon(
+                imageVector = Icons.Default.ErrorOutline,
+                contentDescription = "Download failed, tap to retry",
+                tint = Pink500,
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }

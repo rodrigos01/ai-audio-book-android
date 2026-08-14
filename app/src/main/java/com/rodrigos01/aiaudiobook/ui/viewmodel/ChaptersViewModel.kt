@@ -2,10 +2,15 @@ package com.rodrigos01.aiaudiobook.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.rodrigos01.aiaudiobook.data.ApiRepository
 import com.rodrigos01.aiaudiobook.data.Chapter
 import com.rodrigos01.aiaudiobook.data.FirestoreRepository
+import com.rodrigos01.aiaudiobook.data.Title
 import com.rodrigos01.aiaudiobook.data.Voice
+import com.rodrigos01.aiaudiobook.data.offline.ChapterDownloadState
+import com.rodrigos01.aiaudiobook.data.offline.OfflineDownloadRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -19,11 +24,28 @@ sealed interface ChaptersUiState {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChaptersViewModel(
+    private val offlineDownloadRepository: OfflineDownloadRepository,
     private val firestoreRepository: FirestoreRepository = FirestoreRepository(),
     private val apiRepository: ApiRepository = ApiRepository()
 ) : ViewModel() {
 
     private val _titleId = MutableStateFlow<String?>(null)
+
+    // Observes the full Title document from Firestore, since navigation only carries the
+    // title id/name and would otherwise leave fields like ai_casting_enabled at their defaults.
+    val title: StateFlow<Title?> = _titleId
+        .flatMapLatest { titleId ->
+            if (titleId == null) {
+                flowOf<Title?>(null)
+            } else {
+                firestoreRepository.getTitle(titleId)
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
 
     val uiState: StateFlow<ChaptersUiState> = _titleId
         .flatMapLatest { titleId ->
@@ -61,6 +83,29 @@ class ChaptersViewModel(
         private set
 
     var isLoadingVoices = MutableStateFlow(false)
+        private set
+
+    // Per-chapter offline download state, recomputed whenever the chapter list changes.
+    val downloadStates: StateFlow<Map<String, ChapterDownloadState>> = uiState
+        .flatMapLatest { state ->
+            val chapters = (state as? ChaptersUiState.Success)?.chapters.orEmpty()
+            if (chapters.isEmpty()) {
+                flowOf(emptyMap())
+            } else {
+                combine(chapters.map { chapter ->
+                    offlineDownloadRepository.observeDownloadState(chapter.id).map { chapter.id to it }
+                }) { pairs -> pairs.toMap() }
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyMap()
+        )
+
+    // Set when the user tapped download while not on Wi-Fi, awaiting confirmation to use
+    // mobile data.
+    var pendingMeteredDownloadChapter = MutableStateFlow<Chapter?>(null)
         private set
 
     fun fetchChapters(titleId: String) {
@@ -112,6 +157,30 @@ class ChaptersViewModel(
         chapterToDelete.value = null
     }
 
+    /** Starts a download, or asks for confirmation first if [isOnWifi] is false. */
+    fun requestDownload(chapter: Chapter, isOnWifi: Boolean) {
+        if (isOnWifi) {
+            offlineDownloadRepository.downloadChapter(chapter.id)
+        } else {
+            pendingMeteredDownloadChapter.value = chapter
+        }
+    }
+
+    fun confirmMeteredDownload() {
+        pendingMeteredDownloadChapter.value?.let { offlineDownloadRepository.downloadChapter(it.id) }
+        pendingMeteredDownloadChapter.value = null
+    }
+
+    fun dismissMeteredDownloadConfirmation() {
+        pendingMeteredDownloadChapter.value = null
+    }
+
+    fun deleteDownload(chapterId: String) {
+        viewModelScope.launch {
+            offlineDownloadRepository.deleteDownload(chapterId)
+        }
+    }
+
     fun createChapter(titleId: String, name: String, content: String, voiceId: String) {
         viewModelScope.launch {
             isSubmitting.value = true
@@ -142,6 +211,9 @@ class ChaptersViewModel(
             )
             isSubmitting.value = false
             result.onSuccess {
+                // Edited content means the server regenerates sections, so any previously
+                // downloaded audio for this chapter is now stale.
+                offlineDownloadRepository.deleteDownload(chapterId)
                 dismissBottomSheet()
             }.onFailure { error ->
                 actionError.value = error.localizedMessage ?: "Failed to update chapter"
@@ -155,9 +227,18 @@ class ChaptersViewModel(
             val result = apiRepository.deleteChapter(chapterId)
             isSubmitting.value = false
             result.onSuccess {
+                offlineDownloadRepository.deleteDownload(chapterId)
                 dismissDeleteConfirmation()
             }.onFailure { error ->
                 actionError.value = error.localizedMessage ?: "Failed to delete chapter"
+            }
+        }
+    }
+
+    companion object {
+        fun Factory(offlineDownloadRepository: OfflineDownloadRepository) = viewModelFactory {
+            initializer {
+                ChaptersViewModel(offlineDownloadRepository = offlineDownloadRepository)
             }
         }
     }

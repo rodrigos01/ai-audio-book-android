@@ -37,15 +37,17 @@ data class Voice(
 @Serializable
 data class CreateTitleRequest(
     val name: String,
-    val ai_casting_enabled: Boolean
+    val ai_casting_enabled: Boolean,
+    val tts_tier: String
 )
 
 @Serializable
 data class TitleResponse(
     val id: String,
     val name: String,
-    val owner_id: String,
-    val ai_casting_enabled: Boolean,
+    val owner_id: String? = null,
+    val ai_casting_enabled: Boolean = false,
+    val tts_tier: String? = null,
     val casting_map: Map<String, String> = emptyMap(),
     val narrator_voice: String? = null,
     val created_at: String? = null
@@ -76,9 +78,9 @@ data class ChapterResponse(
     val title_id: String,
     val order_index: Int,
     val name: String? = null,
-    val content: String,
-    val voice_id: String,
-    val is_ssml: Boolean,
+    val content: String? = null,
+    val voice_id: String? = null,
+    val is_ssml: Boolean = false,
     val ai_casting_status: String? = null,
     val created_at: String? = null
 )
@@ -96,6 +98,13 @@ data class CastChapterResponse(
     val casting_map: Map<String, String>,
     val ssml: String,
     val sections_count: Int
+)
+
+@Serializable
+data class PrepareChapterResponse(
+    val totalSections: Int,
+    val generatedSections: Int,
+    val ready: Boolean
 )
 
 @Serializable
@@ -137,6 +146,9 @@ interface AIAudioBookApiService {
 
     @POST("api/chapters/{chapterId}/cast")
     suspend fun castChapter(@Path("chapterId") chapterId: String): CastChapterResponse
+
+    @POST("api/chapters/{chapterId}/prepare")
+    suspend fun prepareChapter(@Path("chapterId") chapterId: String): PrepareChapterResponse
 
     @Streaming
     @GET("api/chapters/{chapterId}/stream")
@@ -204,8 +216,12 @@ class ApiRepository(
         apiService.getVoices()
     }
 
-    suspend fun createTitle(name: String, aiCastingEnabled: Boolean): Result<TitleResponse> = runCatching {
-        apiService.createTitle(CreateTitleRequest(name, aiCastingEnabled))
+    suspend fun createTitle(
+        name: String,
+        aiCastingEnabled: Boolean,
+        ttsTier: String
+    ): Result<TitleResponse> = runCatching {
+        apiService.createTitle(CreateTitleRequest(name, aiCastingEnabled, ttsTier))
     }
 
     suspend fun updateTitle(
@@ -245,6 +261,10 @@ class ApiRepository(
 
     suspend fun castChapter(chapterId: String): Result<CastChapterResponse> = runCatching {
         apiService.castChapter(chapterId)
+    }
+
+    suspend fun prepareChapter(chapterId: String): Result<PrepareChapterResponse> = runCatching {
+        apiService.prepareChapter(chapterId)
     }
 
     fun streamChapter(

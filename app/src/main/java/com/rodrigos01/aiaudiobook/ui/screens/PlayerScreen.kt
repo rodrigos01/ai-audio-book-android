@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
@@ -40,7 +41,9 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import com.rodrigos01.aiaudiobook.common.media.PlaybackStatus
 import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
+import com.rodrigos01.aiaudiobook.theme.AccentGreen
 import com.rodrigos01.aiaudiobook.theme.TextPrimary
+import com.rodrigos01.aiaudiobook.theme.TextSecondary
 import com.rodrigos01.aiaudiobook.ui.toDurationString
 import com.rodrigos01.aiaudiobook.ui.viewmodel.PlayerUiState
 import kotlin.time.Duration.Companion.minutes
@@ -90,6 +93,24 @@ fun PlayerScreen(
             ) {
                 Text(uiState.chapterName.orEmpty(), style = MaterialTheme.typography.headlineLarge)
                 Text(uiState.titleName.orEmpty(), style = MaterialTheme.typography.titleMedium)
+                if (uiState.isOffline) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DownloadDone,
+                            contentDescription = "Playing offline",
+                            tint = AccentGreen,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            "Playing offline",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextSecondary
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(24.dp))
                 var sliderPosition by remember { mutableFloatStateOf(uiState.playbackProgress) }
                 Slider(

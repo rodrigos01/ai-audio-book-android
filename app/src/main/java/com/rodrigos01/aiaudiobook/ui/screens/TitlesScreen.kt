@@ -53,17 +53,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.Timestamp
 import com.rodrigos01.aiaudiobook.data.Title
-import com.rodrigos01.aiaudiobook.theme.AccentGreen
-import com.rodrigos01.aiaudiobook.theme.BorderColor
-import com.rodrigos01.aiaudiobook.theme.CardBackground
-import com.rodrigos01.aiaudiobook.theme.DarkBackground
-import com.rodrigos01.aiaudiobook.theme.DarkSurface
-import com.rodrigos01.aiaudiobook.theme.Indigo500
-import com.rodrigos01.aiaudiobook.theme.Pink500
-import com.rodrigos01.aiaudiobook.theme.TextPrimary
-import com.rodrigos01.aiaudiobook.theme.TextSecondary
-import com.rodrigos01.aiaudiobook.theme.Typography
-import com.rodrigos01.aiaudiobook.theme.Violet500
 import com.rodrigos01.aiaudiobook.ui.components.TitleBottomSheet
 import com.rodrigos01.aiaudiobook.ui.viewmodel.AuthViewModel
 import com.rodrigos01.aiaudiobook.ui.viewmodel.TitlesUiState
@@ -71,7 +60,10 @@ import com.rodrigos01.aiaudiobook.ui.viewmodel.TitlesViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
+import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
+
 @Composable
 fun TitlesScreen(
     authViewModel: AuthViewModel,
@@ -96,37 +88,86 @@ fun TitlesScreen(
         }
     }
 
+    TitlesScreen(
+        titlesState = titlesState,
+        isBottomSheetOpen = isBottomSheetOpen,
+        editingTitle = editingTitle,
+        isSubmitting = isSubmitting,
+        actionError = actionError,
+        titleToDelete = titleToDelete,
+        onTitleClick = onTitleClick,
+        onSignOutClick = { authViewModel.signOut(context) },
+        onRetryClick = { currentUser?.let { titlesViewModel.fetchTitles(it.uid) } },
+        onShowCreateBottomSheet = { titlesViewModel.showCreateBottomSheet() },
+        onShowEditBottomSheet = { titlesViewModel.showEditBottomSheet(it) },
+        onShowDeleteConfirmation = { titlesViewModel.showDeleteConfirmation(it) },
+        onDismissBottomSheet = { titlesViewModel.dismissBottomSheet() },
+        onSubmitTitle = { name, aiCastingEnabled, ttsTier ->
+            val currentEditing = editingTitle
+            if (currentEditing != null) {
+                titlesViewModel.updateTitle(currentEditing.id, name)
+            } else {
+                titlesViewModel.createTitle(name, aiCastingEnabled, ttsTier)
+            }
+        },
+        onConfirmDelete = { titleId -> titlesViewModel.deleteTitle(titleId) },
+        onDismissDeleteConfirmation = { titlesViewModel.dismissDeleteConfirmation() },
+        modifier = modifier
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TitlesScreen(
+    titlesState: TitlesUiState,
+    isBottomSheetOpen: Boolean,
+    editingTitle: Title?,
+    isSubmitting: Boolean,
+    actionError: String?,
+    titleToDelete: Title?,
+    onTitleClick: (Title) -> Unit,
+    onSignOutClick: () -> Unit,
+    onRetryClick: () -> Unit,
+    onShowCreateBottomSheet: () -> Unit,
+    onShowEditBottomSheet: (Title) -> Unit,
+    onShowDeleteConfirmation: (Title) -> Unit,
+    onDismissBottomSheet: () -> Unit,
+    onSubmitTitle: (name: String, aiCastingEnabled: Boolean, ttsTier: String) -> Unit,
+    onConfirmDelete: (titleId: String) -> Unit,
+    onDismissDeleteConfirmation: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         text = "My Audiobooks",
-                        style = Typography.titleLarge,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 actions = {
-                    IconButton(onClick = { authViewModel.signOut(context) }) {
+                    IconButton(onClick = onSignOutClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Default.ExitToApp,
                             contentDescription = "Sign Out",
-                            tint = Pink500
+                            tint = MaterialTheme.colorScheme.error
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = DarkBackground,
-                    titleContentColor = TextPrimary
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { titlesViewModel.showCreateBottomSheet() },
-                containerColor = Indigo500,
-                contentColor = Color.White,
+                onClick = onShowCreateBottomSheet,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Icon(
@@ -135,34 +176,19 @@ fun TitlesScreen(
                 )
             }
         },
-        containerColor = DarkBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(DarkBackground)
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            // Background gradient elements
-            Box(
-                modifier = Modifier
-                    .size(250.dp)
-                    .align(Alignment.BottomStart)
-                    .offset(x = (-50).dp, y = 50.dp)
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(
-                                Violet500.copy(alpha = 0.1f), Color.Transparent
-                            )
-                        )
-                    )
-            )
-
             when (val state = titlesState) {
                 is TitlesUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Indigo500)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
 
@@ -177,12 +203,12 @@ fun TitlesScreen(
                         Text(
                             text = state.message,
                             color = MaterialTheme.colorScheme.error,
-                            style = Typography.bodyLarge,
+                            style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
                         Button(
-                            onClick = { currentUser?.let { titlesViewModel.fetchTitles(it.uid) } },
-                            colors = ButtonDefaults.buttonColors(containerColor = Indigo500)
+                            onClick = onRetryClick,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             Text("Retry")
                         }
@@ -201,14 +227,14 @@ fun TitlesScreen(
                         ) {
                             Text(
                                 text = "No audiobooks found.",
-                                color = TextSecondary,
-                                style = Typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
                             Text(
                                 text = "Tap the '+' button below to create your first audiobook project.",
-                                color = TextSecondary.copy(alpha = 0.7f),
-                                style = Typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.padding(horizontal = 16.dp),
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
@@ -225,8 +251,8 @@ fun TitlesScreen(
                                 TitleCard(
                                     title = title,
                                     onClick = { onTitleClick(title) },
-                                    onEditClick = { titlesViewModel.showEditBottomSheet(title) },
-                                    onDeleteClick = { titlesViewModel.showDeleteConfirmation(title) }
+                                    onEditClick = { onShowEditBottomSheet(title) },
+                                    onDeleteClick = { onShowDeleteConfirmation(title) }
                                 )
                             }
                         }
@@ -238,14 +264,8 @@ fun TitlesScreen(
             if (isBottomSheetOpen) {
                 TitleBottomSheet(
                     editingTitle = editingTitle,
-                    onDismiss = { titlesViewModel.dismissBottomSheet() },
-                    onSubmit = { name, aiCastingEnabled, ttsTier ->
-                        if (editingTitle != null) {
-                            titlesViewModel.updateTitle(editingTitle!!.id, name)
-                        } else {
-                            titlesViewModel.createTitle(name, aiCastingEnabled, ttsTier)
-                        }
-                    },
+                    onDismiss = onDismissBottomSheet,
+                    onSubmit = onSubmitTitle,
                     isSubmitting = isSubmitting,
                     errorMessage = actionError
                 )
@@ -254,41 +274,41 @@ fun TitlesScreen(
             // Delete confirmation dialog
             titleToDelete?.let { title ->
                 AlertDialog(
-                    onDismissRequest = { titlesViewModel.dismissDeleteConfirmation() },
+                    onDismissRequest = onDismissDeleteConfirmation,
                     title = {
                         Text(
                             text = "Delete Audiobook?",
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     },
                     text = {
                         Text(
                             text = "Are you sure you want to delete \"${title.name}\"? This action cannot be undone.",
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
                     confirmButton = {
                         TextButton(
-                            onClick = { titlesViewModel.deleteTitle(title.id) },
+                            onClick = { onConfirmDelete(title.id) },
                             enabled = !isSubmitting
                         ) {
                             Text(
                                 text = if (isSubmitting) "Deleting..." else "Delete",
-                                color = Pink500,
+                                color = MaterialTheme.colorScheme.error,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     },
                     dismissButton = {
                         TextButton(
-                            onClick = { titlesViewModel.dismissDeleteConfirmation() },
+                            onClick = onDismissDeleteConfirmation,
                             enabled = !isSubmitting
                         ) {
-                            Text("Cancel", color = TextSecondary)
+                            Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },
-                    containerColor = DarkSurface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                 )
             }
         }
@@ -306,10 +326,10 @@ fun TitleCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, BorderColor.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = CardBackground.copy(alpha = 0.4f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -326,8 +346,8 @@ fun TitleCard(
             ) {
                 Text(
                     text = title.name,
-                    style = Typography.titleLarge,
-                    color = TextPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp,
                     modifier = Modifier.weight(1f)
@@ -342,15 +362,16 @@ fun TitleCard(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(
-                                if (title.ai_casting_enabled) AccentGreen.copy(alpha = 0.15f)
-                                else TextSecondary.copy(alpha = 0.15f)
+                                if (title.ai_casting_enabled) MaterialTheme.colorScheme.tertiaryContainer
+                                else MaterialTheme.colorScheme.surfaceVariant
                             )
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = if (title.ai_casting_enabled) "AI Casting" else "Solo Voice",
-                            color = if (title.ai_casting_enabled) AccentGreen else TextSecondary,
-                            style = Typography.labelLarge,
+                            color = if (title.ai_casting_enabled) MaterialTheme.colorScheme.onTertiaryContainer
+                                   else MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 11.sp
                         )
@@ -363,7 +384,7 @@ fun TitleCard(
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = "Edit Title",
-                            tint = TextSecondary,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -375,7 +396,7 @@ fun TitleCard(
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Delete Title",
-                            tint = Pink500.copy(alpha = 0.8f),
+                            tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -390,13 +411,13 @@ fun TitleCard(
                 Icon(
                     imageVector = Icons.Default.Mic,
                     contentDescription = "Voice",
-                    tint = Violet500,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
                     text = "Narrator: ${title.narrator_voice ?: "Default"}",
-                    style = Typography.bodyMedium,
-                    color = TextSecondary
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -408,8 +429,8 @@ fun TitleCard(
             ) {
                 Text(
                     text = "Created: ${formatTimestamp(title.created_at)}",
-                    style = Typography.bodyMedium,
-                    color = TextSecondary.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     fontSize = 12.sp
                 )
             }
@@ -423,4 +444,84 @@ private fun formatTimestamp(timestamp: Timestamp?): String {
     val sdf = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
     return sdf.format(date)
 }
+
+@PreviewLightDark
+@Composable
+fun TitlesScreenSuccessPreview() {
+    val sampleTitles = listOf(
+        Title(id = "1", name = "The Great Gatsby", ai_casting_enabled = true, narrator_voice = "en-US-Journey-F"),
+        Title(id = "2", name = "1984", ai_casting_enabled = false, narrator_voice = "en-US-Standard-A")
+    )
+    AIAudioBookTheme {
+        TitlesScreen(
+            titlesState = TitlesUiState.Success(sampleTitles),
+            isBottomSheetOpen = false,
+            editingTitle = null,
+            isSubmitting = false,
+            actionError = null,
+            titleToDelete = null,
+            onTitleClick = {},
+            onSignOutClick = {},
+            onRetryClick = {},
+            onShowCreateBottomSheet = {},
+            onShowEditBottomSheet = {},
+            onShowDeleteConfirmation = {},
+            onDismissBottomSheet = {},
+            onSubmitTitle = { _, _, _ -> },
+            onConfirmDelete = {},
+            onDismissDeleteConfirmation = {}
+        )
+    }
+}
+
+@PreviewLightDark
+@Composable
+fun TitlesScreenEmptyPreview() {
+    AIAudioBookTheme {
+        TitlesScreen(
+            titlesState = TitlesUiState.Success(emptyList()),
+            isBottomSheetOpen = false,
+            editingTitle = null,
+            isSubmitting = false,
+            actionError = null,
+            titleToDelete = null,
+            onTitleClick = {},
+            onSignOutClick = {},
+            onRetryClick = {},
+            onShowCreateBottomSheet = {},
+            onShowEditBottomSheet = {},
+            onShowDeleteConfirmation = {},
+            onDismissBottomSheet = {},
+            onSubmitTitle = { _, _, _ -> },
+            onConfirmDelete = {},
+            onDismissDeleteConfirmation = {}
+        )
+    }
+}
+
+@PreviewLightDark
+@Composable
+fun TitlesScreenLoadingPreview() {
+    AIAudioBookTheme {
+        TitlesScreen(
+            titlesState = TitlesUiState.Loading,
+            isBottomSheetOpen = false,
+            editingTitle = null,
+            isSubmitting = false,
+            actionError = null,
+            titleToDelete = null,
+            onTitleClick = {},
+            onSignOutClick = {},
+            onRetryClick = {},
+            onShowCreateBottomSheet = {},
+            onShowEditBottomSheet = {},
+            onShowDeleteConfirmation = {},
+            onDismissBottomSheet = {},
+            onSubmitTitle = { _, _, _ -> },
+            onConfirmDelete = {},
+            onDismissDeleteConfirmation = {}
+        )
+    }
+}
+
 

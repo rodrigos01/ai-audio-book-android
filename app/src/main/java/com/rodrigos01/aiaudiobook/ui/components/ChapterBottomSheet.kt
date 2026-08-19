@@ -63,12 +63,6 @@ import com.rodrigos01.aiaudiobook.common.util.GoogleAuthHelper
 import com.rodrigos01.aiaudiobook.data.Chapter
 import com.rodrigos01.aiaudiobook.data.Voice
 import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
-import com.rodrigos01.aiaudiobook.theme.BorderColor
-import com.rodrigos01.aiaudiobook.theme.DarkSurface
-import com.rodrigos01.aiaudiobook.theme.Indigo500
-import com.rodrigos01.aiaudiobook.theme.TextPrimary
-import com.rodrigos01.aiaudiobook.theme.TextSecondary
-import com.rodrigos01.aiaudiobook.theme.Typography
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -103,7 +97,7 @@ fun ChapterBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = DarkSurface,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         scrimColor = Color.Black.copy(alpha = 0.6f)
     ) {
         ChapterBottomSheetContent(
@@ -350,9 +344,9 @@ fun ChapterBottomSheetContent(
         ) {
             Text(
                 text = if (isEditMode) "Edit Chapter" else "Add New Chapter",
-                style = Typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             if (!isEditMode) {
@@ -360,22 +354,22 @@ fun ChapterBottomSheetContent(
                     onClick = { showImportDialog = true },
                     enabled = !isAuthorizing && !isSubmitting,
                     shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, Indigo500.copy(alpha = 0.7f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Indigo500
+                        contentColor = MaterialTheme.colorScheme.primary
                     ),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     if (isAuthorizing) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
-                            color = Indigo500,
+                            color = MaterialTheme.colorScheme.primary,
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Authorizing...",
-                            style = Typography.labelLarge,
+                            style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold
                         )
                     } else {
@@ -387,7 +381,7 @@ fun ChapterBottomSheetContent(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Import",
-                            style = Typography.labelLarge,
+                            style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -399,21 +393,21 @@ fun ChapterBottomSheetContent(
             Text(
                 text = errorMessage,
                 color = MaterialTheme.colorScheme.error,
-                style = Typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium
             )
         }
 
         OutlinedTextField(
             value = name,
             onValueChange = onNameChange,
-            label = { Text("Chapter Name", color = TextSecondary) },
+            label = { Text("Chapter Name", color = MaterialTheme.colorScheme.onSurfaceVariant) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Indigo500,
-                unfocusedBorderColor = BorderColor,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
             )
         )
 
@@ -422,8 +416,8 @@ fun ChapterBottomSheetContent(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                color = Indigo500.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, Indigo500.copy(alpha = 0.3f))
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
             ) {
                 Row(
                     modifier = Modifier
@@ -439,21 +433,21 @@ fun ChapterBottomSheetContent(
                         Icon(
                             imageVector = Icons.Default.Description,
                             contentDescription = "Google Doc",
-                            tint = Indigo500,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(22.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
                                 text = "Attached Google Doc",
-                                style = Typography.labelMedium,
+                                style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Indigo500
+                                color = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 text = attachedDocName ?: "ID: $googleDocId",
-                                style = Typography.bodySmall,
-                                color = TextPrimary,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1
                             )
                         }
@@ -465,7 +459,7 @@ fun ChapterBottomSheetContent(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Remove Google Doc",
-                            tint = TextSecondary,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -475,15 +469,15 @@ fun ChapterBottomSheetContent(
             OutlinedTextField(
                 value = content,
                 onValueChange = onContentChange,
-                label = { Text("Chapter Content / Text", color = TextSecondary) },
+                label = { Text("Chapter Content / Text", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                 minLines = 5,
                 maxLines = 10,
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Indigo500,
-                    unfocusedBorderColor = BorderColor,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -493,9 +487,9 @@ fun ChapterBottomSheetContent(
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     text = "Narrator Voice",
-                    style = Typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 if (isLoadingVoices) {
@@ -503,7 +497,7 @@ fun ChapterBottomSheetContent(
                         modifier = Modifier
                             .size(24.dp)
                             .align(Alignment.CenterHorizontally),
-                        color = Indigo500
+                        color = MaterialTheme.colorScheme.primary
                     )
                 } else {
                     val selectedVoice = voices.find { it.id == selectedVoiceId }
@@ -517,9 +511,9 @@ fun ChapterBottomSheetContent(
                                 .fillMaxWidth()
                                 .clickable { onVoiceDropdownExpandedChange(true) },
                             colors = OutlinedTextFieldDefaults.colors(
-                                disabledBorderColor = BorderColor,
-                                disabledTextColor = TextPrimary,
-                                disabledLabelColor = TextSecondary
+                                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
 
@@ -535,12 +529,12 @@ fun ChapterBottomSheetContent(
                                             Text(
                                                 text = voice.name,
                                                 fontWeight = FontWeight.Bold,
-                                                color = TextPrimary
+                                                color = MaterialTheme.colorScheme.onSurface
                                             )
                                             Text(
                                                 text = "${voice.gender} - ${voice.lang}",
                                                 fontSize = 12.sp,
-                                                color = TextSecondary
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     },
@@ -573,22 +567,22 @@ fun ChapterBottomSheetContent(
                 .height(50.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Indigo500,
-                disabledContainerColor = Indigo500.copy(alpha = 0.5f)
+                containerColor = MaterialTheme.colorScheme.primary,
+                disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
             )
         ) {
             if (isSubmitting) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     strokeWidth = 2.dp
                 )
             } else {
                 Text(
                     text = if (isEditMode) "Save Changes" else "Create Chapter",
-                    style = Typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
         }
@@ -605,7 +599,7 @@ fun ChapterBottomSheetAddPreview() {
         Voice("2", "Jane", "Female", "en-US", "")
     )
     AIAudioBookTheme {
-        Surface(color = DarkSurface) {
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             ChapterBottomSheetContent(
                 isEditMode = false,
                 name = "",
@@ -633,7 +627,7 @@ fun ChapterBottomSheetEditPreview() {
         Voice("1", "John", "Male", "en-US", "")
     )
     AIAudioBookTheme {
-        Surface(color = DarkSurface) {
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             ChapterBottomSheetContent(
                 isEditMode = true,
                 name = "Chapter 1: The Beginning",

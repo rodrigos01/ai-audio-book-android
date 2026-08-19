@@ -229,21 +229,6 @@ fun ChaptersScreen(
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Background glow
-            Box(
-                modifier = Modifier
-                    .size(250.dp)
-                    .align(Alignment.TopEnd)
-                    .offset(x = 50.dp, y = (-50).dp)
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.08f), Color.Transparent
-                            )
-                        )
-                    )
-            )
-
             when (val state = chaptersState) {
                 is ChaptersUiState.Idle -> {}
 

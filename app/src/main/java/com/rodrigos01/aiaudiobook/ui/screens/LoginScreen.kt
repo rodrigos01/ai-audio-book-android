@@ -93,32 +93,9 @@ fun LoginScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.background,
-                        MaterialTheme.colorScheme.surfaceContainerHighest
-                    )
-                )
-            ),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
-        // Decorative background gradient circles
-        Box(
-            modifier = Modifier
-                .size(300.dp)
-                .align(Alignment.TopStart)
-                .offset(x = (-100).dp, y = (-50).dp)
-                .background(Brush.radialGradient(colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), Color.Transparent)))
-        )
-        Box(
-            modifier = Modifier
-                .size(350.dp)
-                .align(Alignment.BottomEnd)
-                .offset(x = 100.dp, y = 100.dp)
-                .background(Brush.radialGradient(colors = listOf(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f), Color.Transparent)))
-        )
-
         Card(
             modifier = Modifier
                 .fillMaxWidth(0.9f)

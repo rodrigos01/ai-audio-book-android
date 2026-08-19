@@ -185,21 +185,6 @@ fun TitlesScreen(
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Background gradient elements
-            Box(
-                modifier = Modifier
-                    .size(250.dp)
-                    .align(Alignment.BottomStart)
-                    .offset(x = (-50).dp, y = 50.dp)
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f), Color.Transparent
-                            )
-                        )
-                    )
-            )
-
             when (val state = titlesState) {
                 is TitlesUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

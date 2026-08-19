@@ -1,5 +1,6 @@
 package com.rodrigos01.aiaudiobook.ui.screens
 
+import android.graphics.pdf.models.ListItem
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,6 +36,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -49,11 +50,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -115,7 +113,12 @@ fun ChaptersScreen(
         onShowCreateBottomSheet = { chaptersViewModel.showCreateBottomSheet(currentTitle.ai_casting_enabled) },
         onShowEditBottomSheet = { chaptersViewModel.showEditBottomSheet(it) },
         onShowDeleteConfirmation = { chaptersViewModel.showDeleteConfirmation(it) },
-        onRequestDownload = { chapter -> chaptersViewModel.requestDownload(chapter, NetworkMonitor.isOnWifi(context)) },
+        onRequestDownload = { chapter ->
+            chaptersViewModel.requestDownload(
+                chapter,
+                NetworkMonitor.isOnWifi(context)
+            )
+        },
         onDeleteDownload = { chapterId -> chaptersViewModel.deleteDownload(chapterId) },
         onDismissBottomSheet = { chaptersViewModel.dismissBottomSheet() },
         onSubmitChapter = { name, content, voiceId, googleDocId, googleAccessToken ->
@@ -292,18 +295,20 @@ fun ChaptersScreen(
                             contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
                         ) {
                             items(chapters) { chapter ->
-                                ChapterItemCard(
+                                ChapterItem(
                                     chapter = chapter,
                                     aiCastingEnabled = title.ai_casting_enabled,
-                                    downloadState = downloadStates[chapter.id] ?: ChapterDownloadState.NotDownloaded,
+                                    downloadState = downloadStates[chapter.id]
+                                        ?: ChapterDownloadState.NotDownloaded,
                                     onClick = {
-                                        if (title.ai_casting_enabled && chapter.ai_casting_status != "completed") {
+                                        if (title.ai_casting_enabled && chapter.ai_casting_status != null && chapter.ai_casting_status != "completed") {
                                             val statusMsg = when (chapter.ai_casting_status) {
                                                 "in_progress" -> "AI Casting is currently in progress for this chapter."
                                                 "failed" -> "AI Casting failed for this chapter."
                                                 else -> "Chapter is pending AI casting."
                                             }
-                                            Toast.makeText(context, statusMsg, Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, statusMsg, Toast.LENGTH_SHORT)
+                                                .show()
                                         } else {
                                             onChapterClick(chapter)
                                         }
@@ -393,7 +398,11 @@ fun ChaptersScreen(
                     },
                     confirmButton = {
                         TextButton(onClick = onConfirmMeteredDownload) {
-                            Text("Download", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            Text(
+                                "Download",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     },
                     dismissButton = {
@@ -409,7 +418,7 @@ fun ChaptersScreen(
 }
 
 @Composable
-fun ChapterItemCard(
+fun ChapterItem(
     chapter: Chapter,
     aiCastingEnabled: Boolean = false,
     downloadState: ChapterDownloadState = ChapterDownloadState.NotDownloaded,
@@ -420,38 +429,18 @@ fun ChapterItemCard(
     onDeleteDownloadClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Card(
+    ListItem(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        leadingContent = {
             Text(
                 text = "${chapter.order_index + 1}.",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold,
             )
-            Text(
-                text = chapter.name ?: "Untitled Chapter",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                modifier = Modifier.weight(1f),
-            )
-
+        },
+        trailingContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -459,43 +448,58 @@ fun ChapterItemCard(
                 // AI Casting Status badge (when title has AI casting enabled)
                 if (aiCastingEnabled) {
                     val (badgeText, badgeBg, badgeFg) = when (chapter.ai_casting_status) {
-                        "completed" -> Triple("Ready", MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
-                        "in_progress" -> Triple("Casting...", MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer)
-                        "failed" -> Triple("Casting Failed", MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer)
-                        else -> Triple("Pending", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+                        "completed" -> Triple(
+                            "Ready",
+                            MaterialTheme.colorScheme.tertiaryContainer,
+                            MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+
+                        "in_progress" -> Triple(
+                            "Casting...",
+                            MaterialTheme.colorScheme.secondaryContainer,
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+
+                        "failed" -> Triple(
+                            "Casting Failed",
+                            MaterialTheme.colorScheme.errorContainer,
+                            MaterialTheme.colorScheme.onErrorContainer
+                        )
+
+                        else -> Triple(
+                            "Pending",
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                    Box(
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(badgeBg)
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            when (chapter.ai_casting_status) {
-                                "completed" -> Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = "Casting complete",
-                                    tint = badgeFg,
-                                    modifier = Modifier.size(11.dp)
-                                )
-                                "in_progress" -> CircularProgressIndicator(
-                                    modifier = Modifier.size(11.dp),
-                                    color = badgeFg,
-                                    strokeWidth = 1.5.dp
-                                )
-                                else -> {}
-                            }
-                            Text(
-                                text = badgeText,
-                                color = badgeFg,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 10.sp
+                        when (chapter.ai_casting_status) {
+                            "completed" -> Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Casting complete",
+                                tint = badgeFg,
+                                modifier = Modifier.size(11.dp)
                             )
+
+                            "in_progress" -> CircularProgressIndicator(
+                                modifier = Modifier.size(11.dp),
+                                color = badgeFg,
+                                strokeWidth = 1.5.dp
+                            )
+
+                            else -> {}
                         }
+                        Text(
+                            text = badgeText,
+                            color = badgeFg,
+                        )
                     }
                 } else if (chapter.is_ssml) {
                     Box(
@@ -545,6 +549,11 @@ fun ChapterItemCard(
                 }
             }
         }
+    ) {
+        Text(
+            text = chapter.name ?: "Untitled Chapter",
+            style = MaterialTheme.typography.titleMedium,
+        )
     }
 }
 
@@ -620,8 +629,18 @@ fun DownloadButton(
 fun ChaptersScreenSuccessPreview() {
     val sampleTitle = Title(id = "1", name = "The Great Gatsby", ai_casting_enabled = true)
     val sampleChapters = listOf(
-        Chapter(id = "c1", name = "Chapter 1: Arrival", order_index = 0, ai_casting_status = "completed"),
-        Chapter(id = "c2", name = "Chapter 2: The Dinner Party", order_index = 1, ai_casting_status = "in_progress")
+        Chapter(
+            id = "c1",
+            name = "Chapter 1: Arrival",
+            order_index = 0,
+            ai_casting_status = "completed"
+        ),
+        Chapter(
+            id = "c2",
+            name = "Chapter 2: The Dinner Party",
+            order_index = 1,
+            ai_casting_status = "in_progress"
+        )
     )
     AIAudioBookTheme {
         ChaptersScreen(

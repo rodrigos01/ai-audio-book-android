@@ -239,7 +239,7 @@ fun PlayerScreen(
                             Icons.Default.PlayArrow, onPlayPauseClick
                         )
 
-                        PlaybackStatus.BUFFERING -> CircularProgressIndicator()
+                        PlaybackStatus.BUFFERING -> CircularProgressIndicator(modifier = Modifier.size(72.dp))
                         else -> PlayPauseButton(Icons.Default.Pause, onPlayPauseClick)
                     }
                     IconButton(onClick = onNextClick) {

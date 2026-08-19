@@ -1,7 +1,6 @@
 package com.rodrigos01.aiaudiobook.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,17 +19,15 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -45,24 +41,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.Timestamp
 import com.rodrigos01.aiaudiobook.data.Title
+import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
 import com.rodrigos01.aiaudiobook.ui.components.TitleBottomSheet
 import com.rodrigos01.aiaudiobook.ui.viewmodel.AuthViewModel
 import com.rodrigos01.aiaudiobook.ui.viewmodel.TitlesUiState
 import com.rodrigos01.aiaudiobook.ui.viewmodel.TitlesViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
-
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewLightDark
-import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
 
 @Composable
 fun TitlesScreen(
@@ -139,45 +131,39 @@ fun TitlesScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "My Audiobooks",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                },
-                actions = {
-                    IconButton(onClick = onSignOutClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Default.ExitToApp,
-                            contentDescription = "Sign Out",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
-                )
+        TopAppBar(
+            title = {
+            Text(
+                text = "My Audiobooks",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onShowCreateBottomSheet,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(16.dp)
-            ) {
+        }, actions = {
+            IconButton(onClick = onSignOutClick) {
                 Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add New Title"
+                    imageVector = Icons.AutoMirrored.Default.ExitToApp,
+                    contentDescription = "Sign Out",
+                    tint = MaterialTheme.colorScheme.error
                 )
             }
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-        modifier = modifier
+        }, colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.background,
+            titleContentColor = MaterialTheme.colorScheme.onBackground
+        )
+        )
+    }, floatingActionButton = {
+        FloatingActionButton(
+            onClick = onShowCreateBottomSheet,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add, contentDescription = "Add New Title"
+            )
+        }
+    }, containerColor = MaterialTheme.colorScheme.background, modifier = modifier
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -250,10 +236,9 @@ fun TitlesScreen(
                             items(titles) { title ->
                                 TitleCard(
                                     title = title,
-                                    onClick = { onTitleClick(title) },
-                                    onEditClick = { onShowEditBottomSheet(title) },
-                                    onDeleteClick = { onShowDeleteConfirmation(title) }
-                                )
+                                          onClick = { onTitleClick(title) },
+                                          onEditClick = { onShowEditBottomSheet(title) },
+                                          onDeleteClick = { onShowDeleteConfirmation(title) })
                             }
                         }
                     }
@@ -274,41 +259,34 @@ fun TitlesScreen(
             // Delete confirmation dialog
             titleToDelete?.let { title ->
                 AlertDialog(
-                    onDismissRequest = onDismissDeleteConfirmation,
-                    title = {
+                    onDismissRequest = onDismissDeleteConfirmation, title = {
+                    Text(
+                        text = "Delete Audiobook?",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }, text = {
+                    Text(
+                        text = "Are you sure you want to delete \"${title.name}\"? This action cannot be undone.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }, confirmButton = {
+                    TextButton(
+                        onClick = { onConfirmDelete(title.id) }, enabled = !isSubmitting
+                    ) {
                         Text(
-                            text = "Delete Audiobook?",
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = if (isSubmitting) "Deleting..." else "Delete",
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold
                         )
-                    },
-                    text = {
-                        Text(
-                            text = "Are you sure you want to delete \"${title.name}\"? This action cannot be undone.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    confirmButton = {
-                        TextButton(
-                            onClick = { onConfirmDelete(title.id) },
-                            enabled = !isSubmitting
-                        ) {
-                            Text(
-                                text = if (isSubmitting) "Deleting..." else "Delete",
-                                color = MaterialTheme.colorScheme.error,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(
-                            onClick = onDismissDeleteConfirmation,
-                            enabled = !isSubmitting
-                        ) {
-                            Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    },
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    }
+                }, dismissButton = {
+                    TextButton(
+                        onClick = onDismissDeleteConfirmation, enabled = !isSubmitting
+                    ) {
+                        Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }, containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                 )
             }
         }
@@ -317,124 +295,61 @@ fun TitlesScreen(
 
 @Composable
 fun TitleCard(
-    title: Title,
-    onClick: () -> Unit,
-    onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    title: Title, onClick: () -> Unit, onEditClick: () -> Unit, onDeleteClick: () -> Unit
 ) {
-    Card(
+    ListItem(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = title.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    modifier = Modifier.weight(1f)
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    // Casting Mode Indicator Badge
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                if (title.ai_casting_enabled) MaterialTheme.colorScheme.tertiaryContainer
-                                else MaterialTheme.colorScheme.surfaceVariant
-                            )
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = if (title.ai_casting_enabled) "AI Casting" else "Solo Voice",
-                            color = if (title.ai_casting_enabled) MaterialTheme.colorScheme.onTertiaryContainer
-                                   else MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 11.sp
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onEditClick,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit Title",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onDeleteClick,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Title",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            }
-
-            // Narrator voice information
+        supportingContent = {
+            Text(
+                text = formatTimestamp(title.created_at),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        },
+        trailingContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Mic,
-                    contentDescription = "Voice",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
-                )
                 Text(
-                    text = "Narrator: ${title.narrator_voice ?: "Default"}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = if (title.ai_casting_enabled) "AI Casting" else "Solo Voice",
+                    color = if (title.ai_casting_enabled) MaterialTheme.colorScheme.onTertiaryContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (title.ai_casting_enabled) MaterialTheme.colorScheme.tertiaryContainer
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        )
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 )
-            }
 
-            // Date
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                Text(
-                    text = "Created: ${formatTimestamp(title.created_at)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    fontSize = 12.sp
-                )
+                IconButton(
+                    onClick = onEditClick, modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit Title",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = onDeleteClick, modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Title",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
-        }
+        },
+    ) {
+        Text(text = title.name, style = MaterialTheme.typography.titleLarge)
     }
 }
 
@@ -449,8 +364,14 @@ private fun formatTimestamp(timestamp: Timestamp?): String {
 @Composable
 fun TitlesScreenSuccessPreview() {
     val sampleTitles = listOf(
-        Title(id = "1", name = "The Great Gatsby", ai_casting_enabled = true, narrator_voice = "en-US-Journey-F"),
-        Title(id = "2", name = "1984", ai_casting_enabled = false, narrator_voice = "en-US-Standard-A")
+        Title(
+            id = "1",
+            name = "The Great Gatsby",
+            ai_casting_enabled = true,
+            narrator_voice = "en-US-Journey-F"
+        ), Title(
+            id = "2", name = "1984", ai_casting_enabled = false, narrator_voice = "en-US-Standard-A"
+        )
     )
     AIAudioBookTheme {
         TitlesScreen(
@@ -469,8 +390,7 @@ fun TitlesScreenSuccessPreview() {
             onDismissBottomSheet = {},
             onSubmitTitle = { _, _, _ -> },
             onConfirmDelete = {},
-            onDismissDeleteConfirmation = {}
-        )
+            onDismissDeleteConfirmation = {})
     }
 }
 
@@ -494,8 +414,7 @@ fun TitlesScreenEmptyPreview() {
             onDismissBottomSheet = {},
             onSubmitTitle = { _, _, _ -> },
             onConfirmDelete = {},
-            onDismissDeleteConfirmation = {}
-        )
+            onDismissDeleteConfirmation = {})
     }
 }
 
@@ -519,8 +438,7 @@ fun TitlesScreenLoadingPreview() {
             onDismissBottomSheet = {},
             onSubmitTitle = { _, _, _ -> },
             onConfirmDelete = {},
-            onDismissDeleteConfirmation = {}
-        )
+            onDismissDeleteConfirmation = {})
     }
 }
 

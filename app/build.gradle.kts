@@ -25,7 +25,7 @@ fun gitShortHash(): String {
 
 android {
     namespace = "com.rodrigos01.aiaudiobook"
-    compileSdk = 36
+    compileSdk = 37
 
     signingConfigs {
         create("release") {
@@ -39,7 +39,7 @@ android {
     defaultConfig {
         applicationId = "com.rodrigos01.aiaudiobook"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0-${gitShortHash()}"
     }

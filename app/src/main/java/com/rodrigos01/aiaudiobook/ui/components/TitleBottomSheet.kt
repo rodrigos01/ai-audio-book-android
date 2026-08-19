@@ -38,13 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rodrigos01.aiaudiobook.data.Title
-import com.rodrigos01.aiaudiobook.theme.AccentGreen
-import com.rodrigos01.aiaudiobook.theme.BorderColor
-import com.rodrigos01.aiaudiobook.theme.DarkSurface
-import com.rodrigos01.aiaudiobook.theme.Indigo500
-import com.rodrigos01.aiaudiobook.theme.TextPrimary
-import com.rodrigos01.aiaudiobook.theme.TextSecondary
-import com.rodrigos01.aiaudiobook.theme.Typography
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,7 +62,7 @@ fun TitleBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = DarkSurface,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         scrimColor = Color.Black.copy(alpha = 0.6f)
     ) {
         Column(
@@ -80,30 +73,30 @@ fun TitleBottomSheet(
         ) {
             Text(
                 text = if (isEditMode) "Edit Title" else "Create New Title",
-                style = Typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             if (!errorMessage.isNullOrEmpty()) {
                 Text(
                     text = errorMessage,
                     color = MaterialTheme.colorScheme.error,
-                    style = Typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
 
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Title Name", color = TextSecondary) },
+                label = { Text("Title Name", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Indigo500,
-                    unfocusedBorderColor = BorderColor,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                 )
             )
 
@@ -117,14 +110,14 @@ fun TitleBottomSheet(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "AI Casting",
-                            style = Typography.titleMedium,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Automatically cast voices for characters using Gemini AI",
-                            style = Typography.bodyMedium,
-                            color = TextSecondary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp
                         )
                     }
@@ -132,10 +125,10 @@ fun TitleBottomSheet(
                         checked = aiCastingEnabled,
                         onCheckedChange = { aiCastingEnabled = it },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = AccentGreen,
-                            uncheckedThumbColor = TextSecondary,
-                            uncheckedTrackColor = BorderColor
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.outlineVariant
                         )
                     )
                 }
@@ -146,9 +139,9 @@ fun TitleBottomSheet(
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
                         text = "Voice Quality",
-                        style = Typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                         SegmentedButton(
@@ -156,9 +149,9 @@ fun TitleBottomSheet(
                             onClick = { ttsTier = "basic" },
                             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                             colors = SegmentedButtonDefaults.colors(
-                                activeContainerColor = Indigo500,
-                                activeContentColor = Color.White,
-                                inactiveContentColor = TextSecondary
+                                activeContainerColor = MaterialTheme.colorScheme.primary,
+                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         ) {
                             Text("Basic")
@@ -168,9 +161,9 @@ fun TitleBottomSheet(
                             onClick = { ttsTier = "pro" },
                             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                             colors = SegmentedButtonDefaults.colors(
-                                activeContainerColor = Indigo500,
-                                activeContentColor = Color.White,
-                                inactiveContentColor = TextSecondary
+                                activeContainerColor = MaterialTheme.colorScheme.primary,
+                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         ) {
                             Text("Pro")
@@ -193,22 +186,22 @@ fun TitleBottomSheet(
                     .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Indigo500,
-                    disabledContainerColor = Indigo500.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                 )
             ) {
                 if (isSubmitting) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         strokeWidth = 2.dp
                     )
                 } else {
                     Text(
                         text = if (isEditMode) "Save Changes" else "Create Title",
-                        style = Typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }

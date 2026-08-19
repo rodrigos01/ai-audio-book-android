@@ -54,29 +54,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rodrigos01.aiaudiobook.common.network.NetworkMonitor
 import com.rodrigos01.aiaudiobook.data.Chapter
 import com.rodrigos01.aiaudiobook.data.Title
+import com.rodrigos01.aiaudiobook.data.Voice
 import com.rodrigos01.aiaudiobook.data.offline.ChapterDownloadState
 import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
-import com.rodrigos01.aiaudiobook.theme.AccentGreen
-import com.rodrigos01.aiaudiobook.theme.AccentOrange
-import com.rodrigos01.aiaudiobook.theme.BorderColor
-import com.rodrigos01.aiaudiobook.theme.DarkBackground
-import com.rodrigos01.aiaudiobook.theme.DarkSurface
-import com.rodrigos01.aiaudiobook.theme.Indigo500
-import com.rodrigos01.aiaudiobook.theme.Pink500
-import com.rodrigos01.aiaudiobook.theme.TextPrimary
-import com.rodrigos01.aiaudiobook.theme.TextSecondary
-import com.rodrigos01.aiaudiobook.theme.Typography
-import com.rodrigos01.aiaudiobook.theme.Violet500
 import com.rodrigos01.aiaudiobook.ui.components.ChapterBottomSheet
 import com.rodrigos01.aiaudiobook.ui.viewmodel.ChaptersUiState
 import com.rodrigos01.aiaudiobook.ui.viewmodel.ChaptersViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChaptersScreen(
     title: Title,
@@ -88,9 +78,7 @@ fun ChaptersScreen(
     val context = LocalContext.current
     val chaptersState by chaptersViewModel.uiState.collectAsState()
     val observedTitle by chaptersViewModel.title.collectAsState()
-    // Navigation only carries the title id/name, so fall back to the stub until the full
-    // Firestore document (ai_casting_enabled, casting_map, etc.) has loaded.
-    val title = observedTitle ?: title
+    val currentTitle = observedTitle ?: title
 
     val isBottomSheetOpen by chaptersViewModel.isBottomSheetOpen.collectAsState()
     val editingChapter by chaptersViewModel.editingChapter.collectAsState()
@@ -105,9 +93,85 @@ fun ChaptersScreen(
     val pendingMeteredDownloadChapter by chaptersViewModel.pendingMeteredDownloadChapter.collectAsState()
 
     // Fetch chapters when screen is loaded
-    LaunchedEffect(title.id) {
-        chaptersViewModel.fetchChapters(title.id)
+    LaunchedEffect(currentTitle.id) {
+        chaptersViewModel.fetchChapters(currentTitle.id)
     }
+
+    ChaptersScreen(
+        title = currentTitle,
+        chaptersState = chaptersState,
+        isBottomSheetOpen = isBottomSheetOpen,
+        editingChapter = editingChapter,
+        isSubmitting = isSubmitting,
+        actionError = actionError,
+        chapterToDelete = chapterToDelete,
+        voices = voices,
+        isLoadingVoices = isLoadingVoices,
+        downloadStates = downloadStates,
+        pendingMeteredDownloadChapter = pendingMeteredDownloadChapter,
+        onBackClick = onBackClick,
+        onChapterClick = onChapterClick,
+        onRetryClick = { chaptersViewModel.fetchChapters(currentTitle.id) },
+        onShowCreateBottomSheet = { chaptersViewModel.showCreateBottomSheet(currentTitle.ai_casting_enabled) },
+        onShowEditBottomSheet = { chaptersViewModel.showEditBottomSheet(it) },
+        onShowDeleteConfirmation = { chaptersViewModel.showDeleteConfirmation(it) },
+        onRequestDownload = { chapter -> chaptersViewModel.requestDownload(chapter, NetworkMonitor.isOnWifi(context)) },
+        onDeleteDownload = { chapterId -> chaptersViewModel.deleteDownload(chapterId) },
+        onDismissBottomSheet = { chaptersViewModel.dismissBottomSheet() },
+        onSubmitChapter = { name, content, voiceId, googleDocId, googleAccessToken ->
+            val currentEditing = editingChapter
+            if (currentEditing != null) {
+                chaptersViewModel.updateChapter(currentEditing.id, name, content)
+            } else {
+                chaptersViewModel.createChapter(
+                    titleId = currentTitle.id,
+                    name = name,
+                    content = content,
+                    voiceId = voiceId ?: "",
+                    googleDocId = googleDocId,
+                    googleAccessToken = googleAccessToken
+                )
+            }
+        },
+        onConfirmDeleteChapter = { chapterId -> chaptersViewModel.deleteChapter(chapterId) },
+        onDismissDeleteConfirmation = { chaptersViewModel.dismissDeleteConfirmation() },
+        onConfirmMeteredDownload = { chaptersViewModel.confirmMeteredDownload() },
+        onDismissMeteredDownloadConfirmation = { chaptersViewModel.dismissMeteredDownloadConfirmation() },
+        modifier = modifier
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChaptersScreen(
+    title: Title,
+    chaptersState: ChaptersUiState,
+    isBottomSheetOpen: Boolean,
+    editingChapter: Chapter?,
+    isSubmitting: Boolean,
+    actionError: String?,
+    chapterToDelete: Chapter?,
+    voices: List<Voice>,
+    isLoadingVoices: Boolean,
+    downloadStates: Map<String, ChapterDownloadState>,
+    pendingMeteredDownloadChapter: Chapter?,
+    onBackClick: () -> Unit,
+    onChapterClick: (Chapter) -> Unit,
+    onRetryClick: () -> Unit,
+    onShowCreateBottomSheet: () -> Unit,
+    onShowEditBottomSheet: (Chapter) -> Unit,
+    onShowDeleteConfirmation: (Chapter) -> Unit,
+    onRequestDownload: (Chapter) -> Unit,
+    onDeleteDownload: (String) -> Unit,
+    onDismissBottomSheet: () -> Unit,
+    onSubmitChapter: (name: String, content: String, voiceId: String?, googleDocId: String?, googleAccessToken: String?) -> Unit,
+    onConfirmDeleteChapter: (chapterId: String) -> Unit,
+    onDismissDeleteConfirmation: () -> Unit,
+    onConfirmMeteredDownload: () -> Unit,
+    onDismissMeteredDownloadConfirmation: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -116,14 +180,14 @@ fun ChaptersScreen(
                     Column {
                         Text(
                             text = title.name,
-                            style = Typography.titleLarge,
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Chapters List",
-                            style = Typography.bodyMedium,
-                            color = TextSecondary
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
@@ -132,22 +196,22 @@ fun ChaptersScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = TextPrimary
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = DarkBackground,
-                    titleContentColor = TextPrimary,
-                    navigationIconContentColor = TextPrimary
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { chaptersViewModel.showCreateBottomSheet(title.ai_casting_enabled) },
-                containerColor = Indigo500,
-                contentColor = Color.White,
+                onClick = onShowCreateBottomSheet,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Icon(
@@ -156,14 +220,14 @@ fun ChaptersScreen(
                 )
             }
         },
-        containerColor = DarkBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(DarkBackground)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             // Background glow
             Box(
@@ -174,7 +238,7 @@ fun ChaptersScreen(
                     .background(
                         Brush.radialGradient(
                             colors = listOf(
-                                Pink500.copy(alpha = 0.08f), Color.Transparent
+                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.08f), Color.Transparent
                             )
                         )
                     )
@@ -185,7 +249,7 @@ fun ChaptersScreen(
 
                 is ChaptersUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Indigo500)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
 
@@ -200,12 +264,12 @@ fun ChaptersScreen(
                         Text(
                             text = state.message,
                             color = MaterialTheme.colorScheme.error,
-                            style = Typography.bodyLarge,
+                            style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
                         Button(
-                            onClick = { chaptersViewModel.fetchChapters(title.id) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Indigo500)
+                            onClick = onRetryClick,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             Text("Retry")
                         }
@@ -224,14 +288,14 @@ fun ChaptersScreen(
                         ) {
                             Text(
                                 text = "No chapters found for this title.",
-                                color = TextSecondary,
-                                style = Typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
                             Text(
                                 text = "Tap '+' below to add your first chapter.",
-                                color = TextSecondary.copy(alpha = 0.7f),
-                                style = Typography.bodyMedium
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
                     } else {
@@ -259,12 +323,10 @@ fun ChaptersScreen(
                                             onChapterClick(chapter)
                                         }
                                     },
-                                    onEditClick = { chaptersViewModel.showEditBottomSheet(chapter) },
-                                    onDeleteClick = { chaptersViewModel.showDeleteConfirmation(chapter) },
-                                    onDownloadClick = {
-                                        chaptersViewModel.requestDownload(chapter, NetworkMonitor.isOnWifi(context))
-                                    },
-                                    onDeleteDownloadClick = { chaptersViewModel.deleteDownload(chapter.id) }
+                                    onEditClick = { onShowEditBottomSheet(chapter) },
+                                    onDeleteClick = { onShowDeleteConfirmation(chapter) },
+                                    onDownloadClick = { onRequestDownload(chapter) },
+                                    onDeleteDownloadClick = { onDeleteDownload(chapter.id) }
                                 )
                             }
                         }
@@ -279,21 +341,8 @@ fun ChaptersScreen(
                     aiCastingEnabled = title.ai_casting_enabled,
                     voices = voices,
                     isLoadingVoices = isLoadingVoices,
-                    onDismiss = { chaptersViewModel.dismissBottomSheet() },
-                    onSubmit = { name, content, voiceId, googleDocId, googleAccessToken ->
-                        if (editingChapter != null) {
-                            chaptersViewModel.updateChapter(editingChapter!!.id, name, content)
-                        } else {
-                            chaptersViewModel.createChapter(
-                                titleId = title.id,
-                                name = name,
-                                content = content,
-                                voiceId = voiceId,
-                                googleDocId = googleDocId,
-                                googleAccessToken = googleAccessToken
-                            )
-                        }
-                    },
+                    onDismiss = onDismissBottomSheet,
+                    onSubmit = onSubmitChapter,
                     isSubmitting = isSubmitting,
                     errorMessage = actionError
                 )
@@ -302,72 +351,72 @@ fun ChaptersScreen(
             // Delete confirmation dialog
             chapterToDelete?.let { chapter ->
                 AlertDialog(
-                    onDismissRequest = { chaptersViewModel.dismissDeleteConfirmation() },
+                    onDismissRequest = onDismissDeleteConfirmation,
                     title = {
                         Text(
                             text = "Delete Chapter?",
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     },
                     text = {
                         Text(
                             text = "Are you sure you want to delete \"${chapter.name ?: "Untitled Chapter"}\"? This action cannot be undone.",
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
                     confirmButton = {
                         TextButton(
-                            onClick = { chaptersViewModel.deleteChapter(chapter.id) },
+                            onClick = { onConfirmDeleteChapter(chapter.id) },
                             enabled = !isSubmitting
                         ) {
                             Text(
                                 text = if (isSubmitting) "Deleting..." else "Delete",
-                                color = Pink500,
+                                color = MaterialTheme.colorScheme.error,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     },
                     dismissButton = {
                         TextButton(
-                            onClick = { chaptersViewModel.dismissDeleteConfirmation() },
+                            onClick = onDismissDeleteConfirmation,
                             enabled = !isSubmitting
                         ) {
-                            Text("Cancel", color = TextSecondary)
+                            Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },
-                    containerColor = DarkSurface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                 )
             }
 
             // Confirmation before downloading over mobile data
             pendingMeteredDownloadChapter?.let { chapter ->
                 AlertDialog(
-                    onDismissRequest = { chaptersViewModel.dismissMeteredDownloadConfirmation() },
+                    onDismissRequest = onDismissMeteredDownloadConfirmation,
                     title = {
                         Text(
                             text = "Not on Wi-Fi",
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     },
                     text = {
                         Text(
                             text = "You're not connected to Wi-Fi. Download \"${chapter.name ?: "this chapter"}\" using mobile data?",
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
                     confirmButton = {
-                        TextButton(onClick = { chaptersViewModel.confirmMeteredDownload() }) {
-                            Text("Download", color = Indigo500, fontWeight = FontWeight.Bold)
+                        TextButton(onClick = onConfirmMeteredDownload) {
+                            Text("Download", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         }
                     },
                     dismissButton = {
-                        TextButton(onClick = { chaptersViewModel.dismissMeteredDownloadConfirmation() }) {
-                            Text("Cancel", color = TextSecondary)
+                        TextButton(onClick = onDismissMeteredDownloadConfirmation) {
+                            Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },
-                    containerColor = DarkSurface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                 )
             }
         }
@@ -390,10 +439,10 @@ fun ChapterItemCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, BorderColor.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = DarkSurface.copy(alpha = 0.8f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
         Row(
@@ -405,14 +454,14 @@ fun ChapterItemCard(
         ) {
             Text(
                 text = "${chapter.order_index + 1}.",
-                style = Typography.titleMedium,
-                color = Violet500,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
                 text = chapter.name ?: "Untitled Chapter",
-                style = Typography.titleLarge,
-                color = TextPrimary,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
                 modifier = Modifier.weight(1f),
@@ -424,16 +473,16 @@ fun ChapterItemCard(
             ) {
                 // AI Casting Status badge (when title has AI casting enabled)
                 if (aiCastingEnabled) {
-                    val (badgeText, badgeColor) = when (chapter.ai_casting_status) {
-                        "completed" -> "Ready" to AccentGreen
-                        "in_progress" -> "Casting..." to AccentOrange
-                        "failed" -> "Casting Failed" to Pink500
-                        else -> "Pending" to TextSecondary
+                    val (badgeText, badgeBg, badgeFg) = when (chapter.ai_casting_status) {
+                        "completed" -> Triple("Ready", MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
+                        "in_progress" -> Triple("Casting...", MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer)
+                        "failed" -> Triple("Casting Failed", MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer)
+                        else -> Triple("Pending", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(badgeColor.copy(alpha = 0.15f))
+                            .background(badgeBg)
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
                         Row(
@@ -444,20 +493,20 @@ fun ChapterItemCard(
                                 "completed" -> Icon(
                                     imageVector = Icons.Default.CheckCircle,
                                     contentDescription = "Casting complete",
-                                    tint = badgeColor,
+                                    tint = badgeFg,
                                     modifier = Modifier.size(11.dp)
                                 )
                                 "in_progress" -> CircularProgressIndicator(
                                     modifier = Modifier.size(11.dp),
-                                    color = badgeColor,
+                                    color = badgeFg,
                                     strokeWidth = 1.5.dp
                                 )
                                 else -> {}
                             }
                             Text(
                                 text = badgeText,
-                                color = badgeColor,
-                                style = Typography.labelLarge,
+                                color = badgeFg,
+                                style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 10.sp
                             )
@@ -467,13 +516,13 @@ fun ChapterItemCard(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(AccentOrange.copy(alpha = 0.15f))
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = "SSML",
-                            color = AccentOrange,
-                            style = Typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 10.sp
                         )
@@ -493,7 +542,7 @@ fun ChapterItemCard(
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = "Edit Chapter",
-                        tint = TextSecondary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -505,7 +554,7 @@ fun ChapterItemCard(
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Delete Chapter",
-                        tint = Pink500.copy(alpha = 0.8f),
+                        tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -535,7 +584,7 @@ fun DownloadButton(
             is ChapterDownloadState.NotDownloaded -> Icon(
                 imageVector = Icons.Default.Download,
                 contentDescription = "Download for offline listening",
-                tint = TextSecondary,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp)
             )
 
@@ -546,13 +595,13 @@ fun DownloadButton(
                     CircularProgressIndicator(
                         progress = { fraction },
                         modifier = Modifier.size(18.dp),
-                        color = Indigo500,
+                        color = MaterialTheme.colorScheme.primary,
                         strokeWidth = 2.dp
                     )
                 } else {
                     CircularProgressIndicator(
                         modifier = Modifier.size(18.dp),
-                        color = Indigo500,
+                        color = MaterialTheme.colorScheme.primary,
                         strokeWidth = 2.dp
                     )
                 }
@@ -560,24 +609,134 @@ fun DownloadButton(
 
             is ChapterDownloadState.Downloading -> CircularProgressIndicator(
                 modifier = Modifier.size(18.dp),
-                color = Indigo500,
+                color = MaterialTheme.colorScheme.primary,
                 strokeWidth = 2.dp
             )
 
             is ChapterDownloadState.Downloaded -> Icon(
                 imageVector = Icons.Default.DownloadDone,
                 contentDescription = "Downloaded for offline listening, tap to remove",
-                tint = AccentGreen,
+                tint = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier.size(18.dp)
             )
 
             is ChapterDownloadState.Failed -> Icon(
                 imageVector = Icons.Default.ErrorOutline,
                 contentDescription = "Download failed, tap to retry",
-                tint = Pink500,
+                tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(18.dp)
             )
         }
     }
 }
+
+@PreviewLightDark
+@Composable
+fun ChaptersScreenSuccessPreview() {
+    val sampleTitle = Title(id = "1", name = "The Great Gatsby", ai_casting_enabled = true)
+    val sampleChapters = listOf(
+        Chapter(id = "c1", name = "Chapter 1: Arrival", order_index = 0, ai_casting_status = "completed"),
+        Chapter(id = "c2", name = "Chapter 2: The Dinner Party", order_index = 1, ai_casting_status = "in_progress")
+    )
+    AIAudioBookTheme {
+        ChaptersScreen(
+            title = sampleTitle,
+            chaptersState = ChaptersUiState.Success(sampleChapters),
+            isBottomSheetOpen = false,
+            editingChapter = null,
+            isSubmitting = false,
+            actionError = null,
+            chapterToDelete = null,
+            voices = emptyList(),
+            isLoadingVoices = false,
+            downloadStates = emptyMap(),
+            pendingMeteredDownloadChapter = null,
+            onBackClick = {},
+            onChapterClick = {},
+            onRetryClick = {},
+            onShowCreateBottomSheet = {},
+            onShowEditBottomSheet = {},
+            onShowDeleteConfirmation = {},
+            onRequestDownload = {},
+            onDeleteDownload = {},
+            onDismissBottomSheet = {},
+            onSubmitChapter = { _, _, _, _, _ -> },
+            onConfirmDeleteChapter = {},
+            onDismissDeleteConfirmation = {},
+            onConfirmMeteredDownload = {},
+            onDismissMeteredDownloadConfirmation = {}
+        )
+    }
+}
+
+@PreviewLightDark
+@Composable
+fun ChaptersScreenEmptyPreview() {
+    val sampleTitle = Title(id = "1", name = "The Great Gatsby", ai_casting_enabled = false)
+    AIAudioBookTheme {
+        ChaptersScreen(
+            title = sampleTitle,
+            chaptersState = ChaptersUiState.Success(emptyList()),
+            isBottomSheetOpen = false,
+            editingChapter = null,
+            isSubmitting = false,
+            actionError = null,
+            chapterToDelete = null,
+            voices = emptyList(),
+            isLoadingVoices = false,
+            downloadStates = emptyMap(),
+            pendingMeteredDownloadChapter = null,
+            onBackClick = {},
+            onChapterClick = {},
+            onRetryClick = {},
+            onShowCreateBottomSheet = {},
+            onShowEditBottomSheet = {},
+            onShowDeleteConfirmation = {},
+            onRequestDownload = {},
+            onDeleteDownload = {},
+            onDismissBottomSheet = {},
+            onSubmitChapter = { _, _, _, _, _ -> },
+            onConfirmDeleteChapter = {},
+            onDismissDeleteConfirmation = {},
+            onConfirmMeteredDownload = {},
+            onDismissMeteredDownloadConfirmation = {}
+        )
+    }
+}
+
+@PreviewLightDark
+@Composable
+fun ChaptersScreenLoadingPreview() {
+    val sampleTitle = Title(id = "1", name = "The Great Gatsby", ai_casting_enabled = false)
+    AIAudioBookTheme {
+        ChaptersScreen(
+            title = sampleTitle,
+            chaptersState = ChaptersUiState.Loading,
+            isBottomSheetOpen = false,
+            editingChapter = null,
+            isSubmitting = false,
+            actionError = null,
+            chapterToDelete = null,
+            voices = emptyList(),
+            isLoadingVoices = false,
+            downloadStates = emptyMap(),
+            pendingMeteredDownloadChapter = null,
+            onBackClick = {},
+            onChapterClick = {},
+            onRetryClick = {},
+            onShowCreateBottomSheet = {},
+            onShowEditBottomSheet = {},
+            onShowDeleteConfirmation = {},
+            onRequestDownload = {},
+            onDeleteDownload = {},
+            onDismissBottomSheet = {},
+            onSubmitChapter = { _, _, _, _, _ -> },
+            onConfirmDeleteChapter = {},
+            onDismissDeleteConfirmation = {},
+            onConfirmMeteredDownload = {},
+            onDismissMeteredDownloadConfirmation = {}
+        )
+    }
+}
+
 

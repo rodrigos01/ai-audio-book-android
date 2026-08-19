@@ -182,17 +182,12 @@ class MainActivity : ComponentActivity() {
                                     route.titleId, route.chapterId, playbackService, offlineDownloadRepository,
                                 )
                             )
-                            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                             PlayerScreen(
-                                uiState = uiState,
-                                modifier = Modifier.fillMaxSize(),
+                                playerViewModel = viewModel,
                                 onBackClick = {
                                     navController.popBackStack()
                                 },
-                                onSeek = viewModel::onSeek,
-                                onPreviousClick = viewModel::onPrevious,
-                                onNextClick = viewModel::onNext,
-                                onPlayPauseClick = viewModel::onPlayPause,
+                                modifier = Modifier.fillMaxSize()
                             )
                             DisposableEffect(Unit) {
                                 onDispose {

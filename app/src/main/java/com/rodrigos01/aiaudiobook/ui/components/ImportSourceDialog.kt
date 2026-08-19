@@ -28,13 +28,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.rodrigos01.aiaudiobook.theme.BorderColor
-import com.rodrigos01.aiaudiobook.theme.DarkSurface
-import com.rodrigos01.aiaudiobook.theme.Indigo500
-import com.rodrigos01.aiaudiobook.theme.TextPrimary
-import com.rodrigos01.aiaudiobook.theme.TextSecondary
-import com.rodrigos01.aiaudiobook.theme.Typography
-import com.rodrigos01.aiaudiobook.theme.Violet500
+import androidx.compose.material3.MaterialTheme
 
 enum class ImportSource {
     FILE,
@@ -51,9 +45,9 @@ fun ImportSourceDialog(
         title = {
             Text(
                 text = "Import Chapter Content",
-                style = Typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = MaterialTheme.colorScheme.onSurface
             )
         },
         text = {
@@ -65,8 +59,8 @@ fun ImportSourceDialog(
             ) {
                 Text(
                     text = "Select a source to import your chapter text:",
-                    style = Typography.bodyMedium,
-                    color = TextSecondary
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -95,10 +89,10 @@ fun ImportSourceDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(text = "Cancel", color = TextSecondary)
+                Text(text = "Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
-        containerColor = DarkSurface,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(20.dp)
     )
 }
@@ -116,9 +110,9 @@ private fun ImportOptionCard(
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = DarkSurface
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
-        border = BorderStroke(1.dp, BorderColor.copy(alpha = 0.6f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
@@ -131,21 +125,21 @@ private fun ImportOptionCard(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = Indigo500,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(28.dp)
             )
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = Typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = description,
-                    style = Typography.bodySmall,
-                    color = TextSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp
                 )
             }

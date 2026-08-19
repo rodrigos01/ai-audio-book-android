@@ -37,17 +37,36 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import com.rodrigos01.aiaudiobook.common.media.PlaybackStatus
 import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
-import com.rodrigos01.aiaudiobook.theme.AccentGreen
-import com.rodrigos01.aiaudiobook.theme.TextPrimary
-import com.rodrigos01.aiaudiobook.theme.TextSecondary
 import com.rodrigos01.aiaudiobook.ui.toDurationString
 import com.rodrigos01.aiaudiobook.ui.viewmodel.PlayerUiState
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rodrigos01.aiaudiobook.ui.viewmodel.PlayerViewModel
+
+@Composable
+fun PlayerScreen(
+    playerViewModel: PlayerViewModel,
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val uiState by playerViewModel.uiState.collectAsStateWithLifecycle()
+    PlayerScreen(
+        uiState = uiState,
+        onBackClick = onBackClick,
+        onPlayPauseClick = playerViewModel::onPlayPause,
+        onSeek = playerViewModel::onSeek,
+        onPreviousClick = playerViewModel::onPrevious,
+        onNextClick = playerViewModel::onNext,
+        modifier = modifier
+    )
+}
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,13 +89,14 @@ fun PlayerScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = TextPrimary
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier,
     ) { innerPadding ->
         Box(
@@ -91,8 +111,16 @@ fun PlayerScreen(
                     .align(Alignment.Center)
                     .padding(horizontal = 16.dp),
             ) {
-                Text(uiState.chapterName.orEmpty(), style = MaterialTheme.typography.headlineLarge)
-                Text(uiState.titleName.orEmpty(), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    uiState.chapterName.orEmpty(),
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    uiState.titleName.orEmpty(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 if (uiState.isOffline) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -101,13 +129,13 @@ fun PlayerScreen(
                         Icon(
                             imageVector = Icons.Default.DownloadDone,
                             contentDescription = "Playing offline",
-                            tint = AccentGreen,
+                            tint = MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
                             "Playing offline",
                             style = MaterialTheme.typography.labelMedium,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -128,8 +156,16 @@ fun PlayerScreen(
                     } else {
                         uiState.position
                     }.toDurationString()
-                    Text(positionString)
-                    Text(uiState.duration.toDurationString())
+                    Text(
+                        positionString,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        uiState.duration.toDurationString(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -168,7 +204,7 @@ fun PlayPauseButton(imageVector: ImageVector, onPlayPauseClick: () -> Unit) {
 }
 
 @Composable
-@Preview
+@PreviewLightDark
 fun PlayerScreenPreview() {
     AIAudioBookTheme {
         PlayerScreen(
@@ -179,6 +215,51 @@ fun PlayerScreenPreview() {
                 0.3F,
                 43.seconds,
                 3.minutes + 43.seconds
+            ),
+            onBackClick = {},
+            onPlayPauseClick = {},
+            onSeek = {},
+            onPreviousClick = {},
+            onNextClick = {}
+        )
+    }
+}
+
+@Composable
+@PreviewLightDark
+fun PlayerScreenPausedPreview() {
+    AIAudioBookTheme {
+        PlayerScreen(
+            PlayerUiState(
+                "Chapter 2: The Journey",
+                "Great Adventure",
+                PlaybackStatus.PAUSED,
+                0.6F,
+                2.minutes + 15.seconds,
+                4.minutes
+            ),
+            onBackClick = {},
+            onPlayPauseClick = {},
+            onSeek = {},
+            onPreviousClick = {},
+            onNextClick = {}
+        )
+    }
+}
+
+@Composable
+@PreviewLightDark
+fun PlayerScreenOfflinePreview() {
+    AIAudioBookTheme {
+        PlayerScreen(
+            PlayerUiState(
+                "Chapter 3: Offline Mode",
+                "Great Adventure",
+                PlaybackStatus.PLAYING,
+                0.1F,
+                30.seconds,
+                5.minutes,
+                isOffline = true
             ),
             onBackClick = {},
             onPlayPauseClick = {},

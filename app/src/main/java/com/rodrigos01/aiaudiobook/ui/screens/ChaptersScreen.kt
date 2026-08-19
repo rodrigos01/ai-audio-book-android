@@ -539,7 +539,26 @@ fun DownloadButton(
                 modifier = Modifier.size(18.dp)
             )
 
-            is ChapterDownloadState.Preparing, is ChapterDownloadState.Downloading -> CircularProgressIndicator(
+            is ChapterDownloadState.Preparing -> {
+                val fraction = downloadState.totalSections.takeIf { it > 0 }
+                    ?.let { downloadState.generatedSections.toFloat() / it }
+                if (fraction != null) {
+                    CircularProgressIndicator(
+                        progress = { fraction },
+                        modifier = Modifier.size(18.dp),
+                        color = Indigo500,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = Indigo500,
+                        strokeWidth = 2.dp
+                    )
+                }
+            }
+
+            is ChapterDownloadState.Downloading -> CircularProgressIndicator(
                 modifier = Modifier.size(18.dp),
                 color = Indigo500,
                 strokeWidth = 2.dp

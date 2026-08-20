@@ -43,9 +43,9 @@ object FileUtils {
     }
 
     /**
-     * Extracts the display name from a content URI and strips the file extension (.txt, etc.).
+     * Extracts the raw display name from a content URI without stripping extensions.
      */
-    fun getFileNameFromUri(context: Context, uri: Uri): String? {
+    fun getRawDisplayName(context: Context, uri: Uri): String? {
         var displayName: String? = null
         if (uri.scheme == "content") {
             try {
@@ -66,7 +66,15 @@ object FileUtils {
             displayName = uri.lastPathSegment
         }
 
-        return cleanFileName(displayName)
+        return displayName?.trim()?.ifBlank { null }
+    }
+
+    /**
+     * Extracts the display name from a content URI and strips the file extension (.txt, etc.).
+     */
+    fun getFileNameFromUri(context: Context, uri: Uri): String? {
+        val raw = getRawDisplayName(context, uri)
+        return cleanFileName(raw)
     }
 
     /**

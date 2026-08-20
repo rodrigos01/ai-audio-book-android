@@ -173,7 +173,8 @@ fun ChapterBottomSheetContent(
     var showImportDialog by remember { mutableStateOf(false) }
     var isAuthorizing by remember { mutableStateOf(false) }
     var pendingDocId by remember { mutableStateOf<String?>(null) }
-    var pendingDocTitle by remember { mutableStateOf<String?>(null) }
+    var pendingDocRawTitle by remember { mutableStateOf<String?>(null) }
+    var pendingDocCleanTitle by remember { mutableStateOf<String?>(null) }
 
     // Launcher for Google OAuth consent dialog
     val consentLauncher = rememberLauncherForActivityResult(
@@ -182,19 +183,20 @@ fun ChapterBottomSheetContent(
         if (result.resultCode == Activity.RESULT_OK) {
             val authResult = GoogleAuthHelper.getAuthorizationResultFromIntent(context, result.data)
             val token = authResult?.accessToken
-            val title = pendingDocTitle ?: ""
+            val rawTitle = pendingDocRawTitle ?: ""
+            val cleanTitle = pendingDocCleanTitle ?: rawTitle
             coroutineScope.launch {
                 var docId = pendingDocId
                 if (token != null) {
-                    if (docId == null && title.isNotBlank()) {
-                        docId = GoogleAuthHelper.resolveDriveFileId(title, token)
+                    if (docId == null) {
+                        docId = GoogleAuthHelper.resolveDriveFileId(rawTitle, cleanTitle, token)
                     }
                     isAuthorizing = false
                     val resolvedDocId = docId
                     if (resolvedDocId != null) {
-                        onGoogleDocAttached(resolvedDocId, token, title)
+                        onGoogleDocAttached(resolvedDocId, token, cleanTitle)
                     } else {
-                        Toast.makeText(context, "Could not resolve Google Doc ID.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "Could not resolve Google Doc ID for '$cleanTitle'", Toast.LENGTH_LONG).show()
                     }
                 } else {
                     isAuthorizing = false
@@ -207,7 +209,7 @@ fun ChapterBottomSheetContent(
         }
     }
 
-    // Helper to process imported plain text Uri
+    // Helper to process imported plain text Uri from local storage
     val handleImportedUri: (android.net.Uri?) -> Unit = { uri ->
         if (uri != null) {
             val textResult = FileUtils.readTextFromUri(context, uri)
@@ -232,13 +234,15 @@ fun ChapterBottomSheetContent(
         }
     }
 
-    // Helper to process Drive URI (either Google Doc or regular text file)
+    // Helper to process Drive URI (resolves Google Doc ID & OAuth token for backend import)
     val handleDriveUri: (android.net.Uri?) -> Unit = { uri ->
         if (uri != null) {
-            val rawDocTitle = FileUtils.getFileNameFromUri(context, uri) ?: ""
+            val rawDocTitle = FileUtils.getRawDisplayName(context, uri) ?: ""
+            val cleanDocTitle = FileUtils.cleanFileName(rawDocTitle) ?: rawDocTitle
             var docId = GoogleAuthHelper.extractGoogleDocId(uri)
             pendingDocId = docId
-            pendingDocTitle = rawDocTitle
+            pendingDocRawTitle = rawDocTitle
+            pendingDocCleanTitle = cleanDocTitle
             isAuthorizing = true
 
             coroutineScope.launch {
@@ -257,17 +261,15 @@ fun ChapterBottomSheetContent(
                     } else {
                         val token = authResult.accessToken
                         if (token != null) {
-                            var resolvedDocId = docId
-                            if (resolvedDocId == null && rawDocTitle.isNotBlank()) {
-                                resolvedDocId = GoogleAuthHelper.resolveDriveFileId(rawDocTitle, token)
+                            if (docId == null) {
+                                docId = GoogleAuthHelper.resolveDriveFileId(rawDocTitle, cleanDocTitle, token)
                             }
                             isAuthorizing = false
-                            val finalDocId = resolvedDocId
+                            val finalDocId = docId
                             if (finalDocId != null) {
-                                onGoogleDocAttached(finalDocId, token, rawDocTitle)
+                                onGoogleDocAttached(finalDocId, token, cleanDocTitle)
                             } else {
-                                // Fallback to plain text import if it's a plain text file in Drive
-                                handleImportedUri(uri)
+                                Toast.makeText(context, "Could not resolve Google Doc ID for '$cleanDocTitle'", Toast.LENGTH_LONG).show()
                             }
                         } else {
                             isAuthorizing = false

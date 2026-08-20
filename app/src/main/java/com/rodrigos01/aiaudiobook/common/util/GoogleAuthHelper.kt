@@ -100,37 +100,79 @@ object GoogleAuthHelper {
 
     /**
      * Resolves the real Google Drive File ID using the Google Drive REST API and user's OAuth access token.
+     * Uses a resilient multi-step lookup (exact name, clean name, partial name, and recent Google Docs).
      */
-    suspend fun resolveDriveFileId(fileName: String, accessToken: String): String? = withContext(Dispatchers.IO) {
-        try {
-            val cleanName = fileName.replace("'", "\\'")
-            val query = "name = '$cleanName' and trashed = false"
-            val encodedQuery = URLEncoder.encode(query, "UTF-8")
-            val url = "https://www.googleapis.com/drive/v3/files?q=$encodedQuery&fields=files(id,name,mimeType)&orderBy=modifiedTime%20desc"
+    suspend fun resolveDriveFileId(
+        rawName: String,
+        cleanName: String?,
+        accessToken: String
+    ): String? = withContext(Dispatchers.IO) {
+        val queries = mutableListOf<String>()
 
-            val request = Request.Builder()
-                .url(url)
-                .header("Authorization", "Bearer $accessToken")
-                .get()
-                .build()
+        val escapedRaw = rawName.replace("'", "\\'")
+        queries.add("name = '$escapedRaw' and trashed = false")
 
-            httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    Log.e(TAG, "Failed to resolve file ID: ${response.code} ${response.message}")
-                    return@withContext null
+        if (!cleanName.isNullOrBlank() && cleanName != rawName) {
+            val escapedClean = cleanName.replace("'", "\\'")
+            queries.add("name = '$escapedClean' and trashed = false")
+        }
+
+        val searchBase = cleanName?.takeIf { it.isNotBlank() } ?: rawName
+        if (searchBase.isNotBlank()) {
+            val escapedSearch = searchBase.replace("'", "\\'")
+            queries.add("name contains '$escapedSearch' and trashed = false")
+        }
+
+        queries.add("mimeType = 'application/vnd.google-apps.document' and trashed = false")
+
+        for (query in queries) {
+            try {
+                val encodedQuery = URLEncoder.encode(query, "UTF-8")
+                val url = "https://www.googleapis.com/drive/v3/files?q=$encodedQuery&fields=files(id,name,mimeType,modifiedTime)&orderBy=modifiedTime%20desc&pageSize=10"
+
+                val request = Request.Builder()
+                    .url(url)
+                    .header("Authorization", "Bearer $accessToken")
+                    .get()
+                    .build()
+
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val body = response.body?.string()
+                        if (!body.isNullOrBlank()) {
+                            val json = JSONObject(body)
+                            val files = json.optJSONArray("files")
+                            if (files != null && files.length() > 0) {
+                                for (i in 0 until files.length()) {
+                                    val file = files.getJSONObject(i)
+                                    val fileName = file.optString("name")
+                                    val fileId = file.optString("id")
+                                    if (fileId.isNotBlank()) {
+                                        if (fileName.equals(rawName, ignoreCase = true) ||
+                                            fileName.equals(cleanName, ignoreCase = true) ||
+                                            fileName.contains(searchBase, ignoreCase = true)) {
+                                            Log.d(TAG, "Resolved file '$rawName' to Drive ID: $fileId (name: $fileName)")
+                                            return@withContext fileId
+                                        }
+                                    }
+                                }
+                                if (query == queries.last()) {
+                                    val firstDoc = files.getJSONObject(0)
+                                    val firstId = firstDoc.optString("id")
+                                    if (firstId.isNotBlank()) {
+                                        Log.d(TAG, "Fallback: using most recently modified Google Doc: $firstId (${firstDoc.optString("name")})")
+                                        return@withContext firstId
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Log.e(TAG, "Drive API error [${response.code}]: ${response.message}")
+                    }
                 }
-                val body = response.body?.string() ?: return@withContext null
-                val json = JSONObject(body)
-                val files = json.optJSONArray("files")
-                if (files != null && files.length() > 0) {
-                    val file = files.getJSONObject(0)
-                    val id = file.optString("id")
-                    Log.d(TAG, "Resolved file '$fileName' to Drive ID: $id")
-                    return@withContext id.ifBlank { null }
-                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error executing Drive query: $query", e)
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error resolving Drive file ID for name '$fileName'", e)
         }
         return@withContext null
     }

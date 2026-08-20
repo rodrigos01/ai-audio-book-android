@@ -109,11 +109,12 @@ fun PlayerScreen(
         containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier,
     ) { innerPadding ->
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            val availableWidth = constraints.maxWidth
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -155,23 +156,39 @@ fun PlayerScreen(
                         uiState.playbackProgress
                     )
                 }
-                BoxWithConstraints(
+                var isDragging by remember { mutableStateOf(false) }
+                var dragOffset by remember { mutableFloatStateOf(0F) }
+                val progress = if (isDragging) dragOffset / availableWidth else sliderPosition
+                Box(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    val progressOffset = constraints.maxWidth * sliderPosition
-                    var isDragging by remember { mutableStateOf(false) }
-                    var dragOffset by remember { mutableFloatStateOf(0F) }
+                    val progressOffset = availableWidth * sliderPosition
                     val anchorSize by animateDpAsState(if (isDragging) 16.dp else 8.dp)
                     LinearWavyProgressIndicator(
-                        progress = { if (isDragging) dragOffset / constraints.maxWidth else sliderPosition },
-                        modifier = Modifier.fillMaxWidth(),
+                        progress = { progress },
                         amplitude = {
                             when (uiState.playbackStatus) {
                                 PlaybackStatus.PLAYING -> 1F
                                 else -> 0F
                             }
                         },
+                        modifier = Modifier.fillMaxWidth().draggable(
+                            state = rememberDraggableState { delta ->
+                                dragOffset += delta
+                            },
+                            orientation = Orientation.Horizontal,
+                            startDragImmediately = true,
+                            onDragStarted = { startOffset ->
+                                isDragging = true
+                                dragOffset = startOffset.x
+                            },
+                            onDragStopped = {
+                                isDragging = false
+                                sliderPosition = dragOffset / availableWidth
+                                onSeek(sliderPosition)
+                            }
+                        ),
                     )
                     Box(
                         modifier = Modifier
@@ -186,21 +203,6 @@ fun PlayerScreen(
                                 MaterialTheme.colorScheme.primary,
                                 CircleShape,
                             )
-                            .draggable(
-                                state = rememberDraggableState { delta ->
-                                    dragOffset += delta
-                                },
-                                orientation = Orientation.Horizontal,
-                                onDragStarted = {
-                                    isDragging = true
-                                    dragOffset = progressOffset
-                                },
-                                onDragStopped = {
-                                    isDragging = false
-                                    sliderPosition = dragOffset / constraints.maxWidth
-                                    onSeek(sliderPosition)
-                                }
-                            )
 
                     )
                 }
@@ -209,7 +211,7 @@ fun PlayerScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     val positionString = if (sliderPosition > 0) {
-                        uiState.duration * sliderPosition.toDouble()
+                        uiState.duration * progress.toDouble()
                     } else {
                         uiState.position
                     }.toDurationString()

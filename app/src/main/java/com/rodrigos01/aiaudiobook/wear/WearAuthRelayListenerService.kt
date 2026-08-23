@@ -40,16 +40,19 @@ object WearAuthRelayHandler {
         val sourceNodeId = messageEvent.sourceNodeId
 
         scope.launch {
+            Log.d(TAG, "calling pairDevice()...")
             val response = if (authRepository.currentUser == null) {
                 PairTokenMessage(error = "Not signed in on phone")
             } else {
                 apiRepository.pairDevice().fold(
                     onSuccess = { PairTokenMessage(customToken = it.customToken) },
                     onFailure = { error ->
+                        Log.w(TAG, "pairDevice() failed", error)
                         PairTokenMessage(error = error.localizedMessage ?: "Failed to pair device")
                     }
                 )
             }
+            Log.d(TAG, "pairDevice() resolved, sending result back to watch (hasToken=${response.customToken != null})")
 
             runCatching {
                 Tasks.await(
@@ -59,6 +62,8 @@ object WearAuthRelayHandler {
                         PairTokenMessage.encode(response)
                     )
                 )
+            }.onSuccess {
+                Log.d(TAG, "sent pairing result back to watch")
             }.onFailure { Log.w(TAG, "Failed to send pairing result back to watch", it) }
         }
     }

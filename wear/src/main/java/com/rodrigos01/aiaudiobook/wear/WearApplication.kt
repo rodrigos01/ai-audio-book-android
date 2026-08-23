@@ -2,7 +2,6 @@ package com.rodrigos01.aiaudiobook.wear
 
 import android.app.Application
 import com.google.firebase.FirebaseApp
-import com.google.firebase.FirebaseOptions
 import com.google.android.gms.wearable.Wearable
 import com.rodrigos01.aiaudiobook.core.CoreConfig
 import com.rodrigos01.aiaudiobook.wear.auth.WearAuthResultHandler
@@ -12,25 +11,11 @@ class WearApplication : Application() {
         super.onCreate()
         CoreConfig.serverUrl = BuildConfig.SERVER_URL
 
-        // TEMPORARY for local dev/testing: no wear/google-services.json exists yet (that
-        // requires registering a Firebase Android app for com.rodrigos01.aiaudiobook.wear in the
-        // console - a manual, one-time step - see wear/build.gradle.kts). Until then, initialize
-        // manually with the same Firebase project's values as the phone app's (gitignored)
-        // app/google-services.json. Firebase Auth only validates the API key against the
-        // project, not the package name, so this works for testing the pairing/sign-in flow.
-        // Replace with the google-services plugin + a real wear/google-services.json before
-        // shipping.
-        if (FirebaseApp.getApps(this).isEmpty()) {
-            FirebaseApp.initializeApp(
-                this,
-                FirebaseOptions.Builder()
-                    .setApplicationId("1:883622140264:android:72536d483b951be5e61edd")
-                    .setApiKey("AIzaSyA9ptOZ_L9SHpLTWuxZCBWC5C1ghY-10_8")
-                    .setProjectId("ai-audio-book")
-                    .setStorageBucket("ai-audio-book.firebasestorage.app")
-                    .build()
-            )
-        }
+        // Now that :wear shares :app's applicationId (required for the Wearable Data Layer API
+        // to route messages between them - see wear/build.gradle.kts), the phone's existing
+        // Firebase Android app registration and google-services.json cover this module too, so
+        // the google-services plugin generates the resources FirebaseApp needs here directly.
+        FirebaseApp.initializeApp(this)
 
         // Belt-and-suspenders alongside the manifest-declared WearAuthResultListenerService:
         // manifest delivery to a non-running app is best-effort and subject to Android's

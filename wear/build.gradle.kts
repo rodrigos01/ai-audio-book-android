@@ -1,15 +1,10 @@
 import java.util.Properties
 
-// NOTE: the `com.google.gms.google-services` plugin is intentionally NOT applied yet. It requires
-// a `wear/google-services.json` for a Firebase Android app registered under applicationId
-// "com.rodrigos01.aiaudiobook.wear" (same Firebase project as the phone app) — a manual, one-time
-// step in the Firebase console. Once that file is added (gitignored, distributed out-of-band like
-// the phone's `app/google-services.json`), re-add the plugin alias below and this module's
-// dependency on it.
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
+  alias(libs.plugins.google.services)
 }
 
 val localProperties = Properties()
@@ -32,7 +27,13 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.rodrigos01.aiaudiobook.wear"
+        // Must match :app's applicationId exactly (not just the signing certificate) - the
+        // Wearable Data Layer API (MessageClient/DataClient) only delivers between a phone app
+        // and watch app that share the identical package name and signing cert; this is the
+        // standard pattern for a bundled phone+watch companion app, not a workaround. The
+        // wear-specific Kotlin package (com.rodrigos01.aiaudiobook.wear.*) and Gradle `namespace`
+        // below are unaffected - applicationId is independent of both.
+        applicationId = "com.rodrigos01.aiaudiobook"
         // Wear Compose Material3 / Horologist require Wear OS 3+ (API 30).
         minSdk = 30
         targetSdk = 37

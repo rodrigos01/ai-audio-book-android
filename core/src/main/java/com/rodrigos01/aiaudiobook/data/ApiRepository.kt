@@ -2,7 +2,7 @@ package com.rodrigos01.aiaudiobook.data
 
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
-import com.rodrigos01.aiaudiobook.BuildConfig
+import com.rodrigos01.aiaudiobook.core.CoreConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -121,9 +121,19 @@ data class FetchGoogleDocResponse(
     val content: String
 )
 
+@Serializable
+data class PairResponse(
+    val customToken: String
+)
+
 interface AIAudioBookApiService {
     @POST("api/auth/claim")
     suspend fun claimTitles(): ClaimResponse
+
+    // Mints a short-lived Firebase custom token for the calling (already-authenticated) user,
+    // so a companion device (e.g. the Wear OS app) can sign in without its own login flow.
+    @POST("api/auth/pair")
+    suspend fun pairDevice(): PairResponse
 
     @GET("api/voices")
     suspend fun getVoices(): List<Voice>
@@ -165,7 +175,7 @@ interface AIAudioBookApiService {
 }
 
 class ApiRepository(
-    private val baseUrl: String = BuildConfig.SERVER_URL,
+    private val baseUrl: String = CoreConfig.serverUrl,
     private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
 ) {
     private val json = Json {
@@ -212,6 +222,10 @@ class ApiRepository(
 
     suspend fun claimTitles(): Result<ClaimResponse> = runCatching {
         apiService.claimTitles()
+    }
+
+    suspend fun pairDevice(): Result<PairResponse> = runCatching {
+        apiService.pairDevice()
     }
 
     suspend fun getVoices(): Result<List<Voice>> = runCatching {

@@ -97,6 +97,8 @@ kotlin {
 }
 
 dependencies {
+  implementation(project(":core"))
+
   val composeBom = platform(libs.androidx.compose.bom)
   implementation(composeBom)
   androidTestImplementation(composeBom)
@@ -163,4 +165,7 @@ dependencies {
   // Offline chapter downloads
   implementation(libs.androidx.work.runtime.ktx)
   implementation(libs.androidx.datastore.preferences)
+
+  // Wearable Data Layer (auth-pairing relay to the Wear OS companion app)
+  implementation(libs.play.services.wearable)
 }

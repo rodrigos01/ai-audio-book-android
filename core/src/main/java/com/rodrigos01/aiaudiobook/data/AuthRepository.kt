@@ -78,6 +78,21 @@ class AuthRepository(private val firebaseAuth: FirebaseAuth = FirebaseAuth.getIn
         }
     }
 
+    // Used by companion devices (e.g. Wear OS) to sign in with a custom token minted by the
+    // backend for the already-authenticated phone user, instead of running their own login flow.
+    suspend fun signInWithCustomToken(token: String): Result<AuthResult> {
+        return suspendCancellableCoroutine { continuation ->
+            firebaseAuth.signInWithCustomToken(token)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        continuation.resume(Result.success(task.result!!))
+                    } else {
+                        continuation.resume(Result.failure(task.exception ?: Exception("Sign in failed.")))
+                    }
+                }
+        }
+    }
+
     suspend fun loginWithGoogleCredential(idToken: String): Result<AuthResult> {
         val credential = GoogleAuthProvider.getCredential(idToken, null)
         return suspendCancellableCoroutine { continuation ->

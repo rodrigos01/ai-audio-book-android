@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.rodrigos01.aiaudiobook.BuildConfig
 import com.rodrigos01.aiaudiobook.common.media.MediaPlaybackService
 import com.rodrigos01.aiaudiobook.common.media.PlaybackStatus
 import com.rodrigos01.aiaudiobook.data.ApiRepository
@@ -14,6 +13,7 @@ import com.rodrigos01.aiaudiobook.data.Chapter
 import com.rodrigos01.aiaudiobook.data.FirestoreRepository
 import com.rodrigos01.aiaudiobook.data.Title
 import com.rodrigos01.aiaudiobook.data.offline.OfflineDownloadRepository
+import com.rodrigos01.aiaudiobook.core.CoreConfig
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -65,7 +65,7 @@ class PlayerViewModel(
             // live HLS stream otherwise.
             val localFilePath = offlineDownloadRepository.localFilePath(chapter.id)
             val uri: Uri = localFilePath?.let { Uri.fromFile(File(it)) }
-                ?: "${BuildConfig.SERVER_URL}api/chapters/${chapter.id}/hls/playlist.m3u8".toUri()
+                ?: "${CoreConfig.serverUrl}api/chapters/${chapter.id}/hls/playlist.m3u8".toUri()
 
             playbackService.setMedia(
                 uri = uri,

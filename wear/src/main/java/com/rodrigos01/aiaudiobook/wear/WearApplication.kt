@@ -3,7 +3,9 @@ package com.rodrigos01.aiaudiobook.wear
 import android.app.Application
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
+import com.google.android.gms.wearable.Wearable
 import com.rodrigos01.aiaudiobook.core.CoreConfig
+import com.rodrigos01.aiaudiobook.wear.auth.WearAuthResultHandler
 
 class WearApplication : Application() {
     override fun onCreate() {
@@ -28,6 +30,13 @@ class WearApplication : Application() {
                     .setStorageBucket("ai-audio-book.firebasestorage.app")
                     .build()
             )
+        }
+
+        // Belt-and-suspenders alongside the manifest-declared WearAuthResultListenerService:
+        // manifest delivery to a non-running app is best-effort and subject to Android's
+        // background-execution restrictions, so also listen live while this process is alive.
+        Wearable.getMessageClient(this).addListener { messageEvent ->
+            WearAuthResultHandler.handle(messageEvent)
         }
     }
 }

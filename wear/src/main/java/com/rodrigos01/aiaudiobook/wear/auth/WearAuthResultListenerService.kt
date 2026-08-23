@@ -11,16 +11,20 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * Receives the phone's response to an auth-pairing request and signs the watch in with the
- * resulting Firebase custom token. Runs as a system-instantiated service (not tied to any
- * Activity/ViewModel lifecycle), so it publishes the outcome via [WearAuthResultBus] for the UI
- * to react to.
+ * Handles the phone's response to an auth-pairing request and signs the watch in with the
+ * resulting Firebase custom token, publishing the outcome via [WearAuthResultBus] for the UI to
+ * react to. Lives in this standalone object rather than the service class so it can be invoked
+ * both by the manifest-declared [WearAuthResultListenerService] below (best-effort delivery,
+ * subject to Android's background-execution restrictions when the app isn't running) and a live
+ * [com.google.android.gms.wearable.MessageClient] listener registered in
+ * [com.rodrigos01.aiaudiobook.wear.WearApplication] while the app process is alive - per Google's
+ * own migration guidance to combine both rather than rely on the manifest alone.
  */
-class WearAuthResultListenerService : WearableListenerService() {
+object WearAuthResultHandler {
     private val authRepository = AuthRepository()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    override fun onMessageReceived(messageEvent: MessageEvent) {
+    fun handle(messageEvent: MessageEvent) {
         if (messageEvent.path != WearMessagePaths.AUTH_TOKEN_RESULT) return
 
         val message = runCatching { PairTokenMessage.decode(messageEvent.data) }
@@ -40,5 +44,11 @@ class WearAuthResultListenerService : WearableListenerService() {
                 }
             )
         }
+    }
+}
+
+class WearAuthResultListenerService : WearableListenerService() {
+    override fun onMessageReceived(messageEvent: MessageEvent) {
+        WearAuthResultHandler.handle(messageEvent)
     }
 }

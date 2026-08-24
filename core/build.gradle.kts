@@ -44,6 +44,7 @@ dependencies {
     implementation(libs.androidx.compose.ui)
 
     // Internal implementation details, not part of :core's public API surface.
+    implementation(libs.androidx.media3.exoplayer)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.kotlinx.serialization.json)

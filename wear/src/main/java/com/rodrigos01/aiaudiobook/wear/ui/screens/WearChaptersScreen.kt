@@ -3,6 +3,7 @@ package com.rodrigos01.aiaudiobook.wear.ui.screens
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -13,6 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
+import androidx.wear.compose.material.ExperimentalWearMaterialApi
+import androidx.wear.compose.material.placeholderShimmer
+import androidx.wear.compose.material.rememberPlaceholderState
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.Text
@@ -36,6 +40,7 @@ private fun castingStatusLabel(chapter: Chapter): String = when (chapter.ai_cast
     else -> "Pending"
 }
 
+@OptIn(ExperimentalWearMaterialApi::class)
 @Composable
 fun WearChaptersScreen(
     titleId: String,
@@ -50,25 +55,34 @@ fun WearChaptersScreen(
     DisposableEffect(Unit) { onDispose { chaptersViewModel.clearChapters() } }
 
     when (val current = state) {
-        is ChaptersUiState.Idle, is ChaptersUiState.Loading -> Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        is ChaptersUiState.Idle, is ChaptersUiState.Loading -> Box(
+            modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
             Text("Loading…")
         }
-        is ChaptersUiState.Error -> Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+
+        is ChaptersUiState.Error -> Box(
+            modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
             Text(current.message)
         }
+
         is ChaptersUiState.Success -> {
             val listState = rememberScalingLazyListState()
             ScalingLazyColumn(modifier = modifier.fillMaxSize(), state = listState) {
                 item { ListHeader { Text(title?.name.orEmpty()) } }
                 items(current.chapters, key = { it.id }) { chapter ->
                     val blocked = isCastingBlocked(title, chapter)
-                    Button(onClick = { if (!blocked) onChapterClick(chapter) }) {
-                        Column {
-                            Text(chapter.name ?: "Chapter")
-                            if (title?.ai_casting_enabled == true) {
-                                Text(castingStatusLabel(chapter))
-                            }
-                        }
+                    Button(
+                        onClick = { onChapterClick(chapter) },
+                        enabled = !blocked,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .placeholderShimmer(rememberPlaceholderState { blocked })
+                    ) {
+                        Text(chapter.name ?: "Chapter")
                     }
                 }
             }

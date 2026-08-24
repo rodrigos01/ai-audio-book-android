@@ -75,6 +75,8 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 androidx-wear-compose-material3 = { group = "androidx.wear.compose", name = "compose-material3", version.ref = "wearCompose" }
 androidx-wear-compose-foundation = { group = "androidx.wear.compose", name = "compose-foundation", version.ref = "wearCompose" }
 androidx-wear-compose-navigation = { group = "androidx.wear.compose", name = "compose-navigation", version.ref = "wearCompose" }
+androidx-wear-compose-material-icons-core = { group = "androidx.wear.compose", name = "material-icons-core", version.ref = "wearCompose" }
+androidx-wear-compose-material-icons-extended = { group = "androidx.wear.compose", name = "material-icons-extended", version.ref = "wearCompose" }
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
 
 

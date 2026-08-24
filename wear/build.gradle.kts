@@ -1,10 +1,10 @@
 import java.util.Properties
 
 plugins {
-  alias(libs.plugins.android.application)
-  alias(libs.plugins.compose.compiler)
-  alias(libs.plugins.kotlin.serialization)
-  alias(libs.plugins.google.services)
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.google.services)
 }
 
 val localProperties = Properties()
@@ -47,7 +47,10 @@ android {
         }
         release {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             signingConfig = signingConfigs.getByName("release")
         }
     }
@@ -56,7 +59,11 @@ android {
         create("prod") {
             isDefault = true
             dimension = "environment"
-            buildConfigField("String", "SERVER_URL", "\"https://ai-audio-book-api-883622140264.us-central1.run.app/\"")
+            buildConfigField(
+                "String",
+                "SERVER_URL",
+                "\"https://ai-audio-book-api-883622140264.us-central1.run.app/\""
+            )
         }
         create("dev") {
             dimension = "environment"
@@ -68,16 +75,16 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
-      compose = true
-      aidl = false
-      buildConfig = true
-      shaders = false
+        compose = true
+        aidl = false
+        buildConfig = true
+        shaders = false
     }
 
     packaging {
-      resources {
-        excludes += "/META-INF/{AL2.0,LGPL2.1}"
-      }
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
@@ -86,33 +93,35 @@ kotlin {
 }
 
 dependencies {
-  implementation(project(":core"))
+    implementation(project(":core"))
 
-  val composeBom = platform(libs.androidx.compose.bom)
-  implementation(composeBom)
+    val composeBom = platform(libs.androidx.compose.bom)
+    implementation(composeBom)
 
-  implementation(libs.androidx.core.ktx)
-  implementation(libs.androidx.lifecycle.runtime.ktx)
-  implementation(libs.androidx.activity.compose)
-  implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
-  // Wear Compose (not standard Material3 - watch screens use round/square-aware components)
-  implementation(libs.androidx.wear.compose.material3)
-  implementation(libs.androidx.wear.compose.foundation)
-  implementation(libs.androidx.wear.compose.navigation)
+    // Wear Compose (not standard Material3 - watch screens use round/square-aware components)
+    implementation(libs.androidx.wear.compose.material3)
+    implementation(libs.androidx.wear.compose.foundation)
+    implementation(libs.androidx.wear.compose.navigation)
+    implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.androidx.compose.material.icons.extended)
 
-  // Wearable Data Layer (auth-pairing relay with the phone app)
-  implementation(libs.play.services.wearable)
+    // Wearable Data Layer (auth-pairing relay with the phone app)
+    implementation(libs.play.services.wearable)
 
-  // Media3 ExoPlayer - the watch runs its own playback service, standalone from the phone
-  implementation(libs.androidx.media3.exoplayer)
-  implementation(libs.androidx.media3.session)
-  implementation(libs.androidx.media3.hls)
+    // Media3 ExoPlayer - the watch runs its own playback service, standalone from the phone
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
+    implementation(libs.androidx.media3.hls)
 
-  // Offline chapter downloads
-  implementation(libs.androidx.work.runtime.ktx)
-  implementation(libs.androidx.datastore.preferences)
+    // Offline chapter downloads
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.datastore.preferences)
 
-  testImplementation(libs.junit)
-  testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

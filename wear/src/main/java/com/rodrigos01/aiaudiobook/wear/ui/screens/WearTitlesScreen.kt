@@ -2,6 +2,7 @@ package com.rodrigos01.aiaudiobook.wear.ui.screens
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -46,7 +47,7 @@ fun WearTitlesScreen(
             ScalingLazyColumn(modifier = modifier.fillMaxSize(), state = listState) {
                 item { ListHeader { Text("Your titles") } }
                 items(current.titles, key = { it.id }) { title ->
-                    Button(onClick = { onTitleClick(title) }) {
+                    Button(onClick = { onTitleClick(title) }, modifier = Modifier.fillMaxWidth()) {
                         Text(title.name)
                     }
                 }

@@ -2,8 +2,14 @@ package com.rodrigos01.aiaudiobook.wear.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -15,7 +21,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.IconButton
 import androidx.wear.compose.material3.Text
+import com.google.firebase.annotations.PreviewApi
 import com.rodrigos01.aiaudiobook.common.network.NetworkMonitor
 import com.rodrigos01.aiaudiobook.data.offline.ChapterDownloadState
 import com.rodrigos01.aiaudiobook.ui.viewmodel.ChaptersUiState
@@ -54,39 +64,46 @@ fun WearChapterActionScreen(
     }
 
     Column(
-        modifier = modifier.fillMaxSize().padding(16.dp),
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(chapter?.name ?: "Chapter")
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        ) {
 
-        Button(onClick = onPlayClick) {
-            Text("Play")
-        }
-
-        when (downloadState) {
-            is ChapterDownloadState.Downloaded -> Text("Downloaded")
-            is ChapterDownloadState.Preparing -> Text("Preparing…")
-            is ChapterDownloadState.Downloading -> Text("Downloading…")
-            is ChapterDownloadState.Failed -> Button(onClick = { startDownload() }) {
-                Text("Retry download")
+            IconButton(onClick = onPlayClick) {
+                Icon(Icons.Default.PlayArrow, contentDescription = null)
             }
-            ChapterDownloadState.NotDownloaded -> Button(onClick = { startDownload() }) {
-                Text("Download")
-            }
-        }
 
-        if (showLowStorageWarning) {
-            Text("Not enough storage on watch. Free up space in Downloads.")
-        }
+            when (downloadState) {
+                is ChapterDownloadState.Downloaded -> Icon(Icons.Default.Check, contentDescription = null)
+                is ChapterDownloadState.Preparing,
+                is ChapterDownloadState.Downloading -> CircularProgressIndicator()
+                is ChapterDownloadState.Failed -> IconButton(onClick = { startDownload() }) {
+                    Icon(Icons.Default.Refresh, contentDescription = null)
+                }
 
-        if (pendingMeteredChapter != null) {
-            Text("Not on Wi-Fi. Download using mobile data?")
-            Button(onClick = { chaptersViewModel.confirmMeteredDownload() }) {
-                Text("Download anyway")
+                ChapterDownloadState.NotDownloaded -> IconButton(onClick = { startDownload() }) {
+                    Icon(Icons.Default.Download, contentDescription = null)
+                }
             }
-            Button(onClick = { chaptersViewModel.dismissMeteredDownloadConfirmation() }) {
-                Text("Cancel")
+
+            if (showLowStorageWarning) {
+                Text("Not enough storage on watch. Free up space in Downloads.")
+            }
+
+            if (pendingMeteredChapter != null) {
+                Text("Not on Wi-Fi. Download using mobile data?")
+                Button(onClick = { chaptersViewModel.confirmMeteredDownload() }) {
+                    Text("Download anyway")
+                }
+                Button(onClick = { chaptersViewModel.dismissMeteredDownloadConfirmation() }) {
+                    Text("Cancel")
+                }
             }
         }
     }

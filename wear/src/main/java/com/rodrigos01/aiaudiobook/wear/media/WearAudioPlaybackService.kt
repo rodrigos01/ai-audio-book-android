@@ -1,85 +1,14 @@
 package com.rodrigos01.aiaudiobook.wear.media
 
-import android.app.PendingIntent
-import android.content.Intent
-import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.DefaultHttpDataSource
-import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
+import com.rodrigos01.aiaudiobook.common.media.BaseAudioPlaybackService
 import com.rodrigos01.aiaudiobook.wear.WearMainActivity
 
 /**
- * The watch's own playback service - mirrors [com.rodrigos01.aiaudiobook.common.media.AudioPlaybackService]
- * on the phone, but runs as a separate service/process on the watch so playback works standalone
- * (own Bluetooth/network connection, no phone required), per the Wear OS plan.
+ * The watch's own playback service - shares [BaseAudioPlaybackService] with the phone's
+ * [com.rodrigos01.aiaudiobook.common.media.AudioPlaybackService], but runs as a separate
+ * service/process on the watch so playback works standalone (own Bluetooth/network connection,
+ * no phone required), per the Wear OS plan.
  */
-class WearAudioPlaybackService : MediaSessionService() {
-    private var mediaSession: MediaSession? = null
-
-    override fun onCreate() {
-        super.onCreate()
-
-        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
-            .setConnectTimeoutMs(30_000)
-            .setReadTimeoutMs(30_000)
-            .setAllowCrossProtocolRedirects(true)
-
-        // Wrap the HTTP factory so file:// URIs (downloaded chapters played offline) are also
-        // resolved correctly instead of being routed through the HTTP data source.
-        val dataSourceFactory = DefaultDataSource.Factory(this, httpDataSourceFactory)
-
-        val mediaSourceFactory = DefaultMediaSourceFactory(this)
-            .setDataSourceFactory(dataSourceFactory)
-
-        val loadControl = DefaultLoadControl.Builder()
-            .setBufferDurationsMs(
-                DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
-                DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
-                1000,
-                2000
-            )
-            .setPrioritizeTimeOverSizeThresholds(true)
-            .build()
-
-        val player = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(mediaSourceFactory)
-            .setLoadControl(loadControl)
-            .build()
-
-        val intent = Intent(this, WearMainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-        mediaSession = MediaSession.Builder(this, player)
-            .setSessionActivity(pendingIntent)
-            .build()
-    }
-
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
-        return mediaSession
-    }
-
-    override fun onTaskRemoved(rootIntent: Intent?) {
-        val player = mediaSession?.player
-        if (player == null || !player.playWhenReady || player.mediaItemCount == 0) {
-            stopSelf()
-        }
-    }
-
-    override fun onDestroy() {
-        mediaSession?.run {
-            player.release()
-            release()
-            mediaSession = null
-        }
-        super.onDestroy()
-    }
+class WearAudioPlaybackService : BaseAudioPlaybackService() {
+    override val sessionActivityClass = WearMainActivity::class.java
 }

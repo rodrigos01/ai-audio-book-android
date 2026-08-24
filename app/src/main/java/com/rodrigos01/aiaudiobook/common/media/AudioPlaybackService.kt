@@ -32,7 +32,7 @@ class AudioPlaybackService : MediaSessionService() {
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
                 DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
-                DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
+                Int.MAX_VALUE,
                 1000,
                 2000
             )

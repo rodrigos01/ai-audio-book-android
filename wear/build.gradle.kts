@@ -1,3 +1,4 @@
+import com.google.firebase.appdistribution.gradle.firebaseAppDistribution
 import java.util.Properties
 
 plugins {
@@ -5,6 +6,7 @@ plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.appdistribution)
 }
 
 val localProperties = Properties()
@@ -52,6 +54,13 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
+            firebaseAppDistribution {
+                artifactType = "APK"
+                // Shared with :app - the applicationId matches, so this is the same
+                // Firebase Android app entry and the same service account can upload for it.
+                serviceCredentialsFile = "app/ai-audio-book-2c2ff064ff10.json"
+                groups = "devs"
+            }
         }
     }
     flavorDimensions += "environment"

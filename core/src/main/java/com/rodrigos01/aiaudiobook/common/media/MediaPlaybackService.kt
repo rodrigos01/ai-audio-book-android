@@ -8,6 +8,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CoroutineScope
@@ -23,7 +24,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-class MediaPlaybackService(context: Context) {
+class MediaPlaybackService(context: Context, serviceClass: Class<out MediaSessionService>) {
     private val appContext = context.applicationContext
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var controller: MediaController? = null
@@ -35,7 +36,7 @@ class MediaPlaybackService(context: Context) {
 
     init {
         val sessionToken =
-            SessionToken(appContext, ComponentName(appContext, AudioPlaybackService::class.java))
+            SessionToken(appContext, ComponentName(appContext, serviceClass))
         val future = MediaController.Builder(appContext, sessionToken).buildAsync()
         controllerFuture = future
         future.addListener({

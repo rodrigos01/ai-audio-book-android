@@ -1,10 +1,7 @@
 package com.rodrigos01.aiaudiobook.theme
 
 import androidx.compose.material3.Typography
-import androidx.compose.ui.text.font.FontFamily
 
-val bodyFontFamily = FontFamily.SansSerif
-val displayFontFamily = FontFamily.Serif
 
 // Default Material 3 typography values
 val baseline = Typography()

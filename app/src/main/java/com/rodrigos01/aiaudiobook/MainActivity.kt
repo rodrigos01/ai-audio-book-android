@@ -29,6 +29,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.google.firebase.FirebaseApp
+import com.rodrigos01.aiaudiobook.common.media.AudioPlaybackService
 import com.rodrigos01.aiaudiobook.common.media.MediaPlaybackService
 import com.rodrigos01.aiaudiobook.data.Title
 import com.rodrigos01.aiaudiobook.data.offline.OfflineDownloadRepository
@@ -90,7 +91,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
                 ) {
                     val context = LocalContext.current.applicationContext
-                    val playbackService = remember { MediaPlaybackService(context) }
+                    val playbackService = remember { MediaPlaybackService(context, AudioPlaybackService::class.java) }
                     DisposableEffect(Unit) {
                         onDispose { playbackService.release() }
                     }

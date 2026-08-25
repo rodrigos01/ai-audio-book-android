@@ -70,6 +70,9 @@ class OfflineDownloadRepository(
     /** Local file path for a chapter, if it has a completed download, without observing changes. */
     suspend fun localFilePath(chapterId: String): String? = downloadedChapterStore.get(chapterId)?.filePath
 
+    /** All completed downloads, keyed by chapter id - used by storage-management UI (e.g. Wear's downloads list). */
+    fun observeAllDownloads(): Flow<Map<String, DownloadedChapter>> = downloadedChapterStore.observeAll()
+
     private fun WorkInfo.toDownloadState(): ChapterDownloadState? =
         when (progress.getString(ChapterDownloadWorker.KEY_PHASE)) {
             ChapterDownloadWorker.PHASE_PREPARING -> ChapterDownloadState.Preparing(

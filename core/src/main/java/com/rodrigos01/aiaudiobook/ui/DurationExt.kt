@@ -2,7 +2,6 @@ package com.rodrigos01.aiaudiobook.ui
 
 import kotlin.time.Duration
 
-
 fun Duration.toDurationString() = toComponents { hours, minutes, seconds, _ ->
     StringBuilder().apply {
         if (hours > 0) {

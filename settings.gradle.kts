@@ -30,4 +30,4 @@ plugins {
 }
 
 rootProject.name = "AIAudioBook"
-include(":app")
+include(":app", ":core", ":wear")

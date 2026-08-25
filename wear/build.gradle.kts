@@ -1,0 +1,136 @@
+import com.google.firebase.appdistribution.gradle.firebaseAppDistribution
+import java.util.Properties
+
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.appdistribution)
+}
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+
+android {
+    namespace = "com.rodrigos01.aiaudiobook.wear"
+    compileSdk = 37
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("../app/ai-audio-book-keystore")
+            storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
+            keyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
+            keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
+        }
+    }
+
+    defaultConfig {
+        // Must match :app's applicationId exactly (not just the signing certificate) - the
+        // Wearable Data Layer API (MessageClient/DataClient) only delivers between a phone app
+        // and watch app that share the identical package name and signing cert; this is the
+        // standard pattern for a bundled phone+watch companion app, not a workaround. The
+        // wear-specific Kotlin package (com.rodrigos01.aiaudiobook.wear.*) and Gradle `namespace`
+        // below are unaffected - applicationId is independent of both.
+        applicationId = "com.rodrigos01.aiaudiobook"
+        // Wear Compose Material3 / Horologist require Wear OS 3+ (API 30).
+        minSdk = 30
+        targetSdk = 37
+        versionCode = 1
+        versionName = "1.0"
+    }
+
+    buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("release")
+        }
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            signingConfig = signingConfigs.getByName("release")
+            firebaseAppDistribution {
+                artifactType = "APK"
+                // Shared with :app - the applicationId matches, so this is the same
+                // Firebase Android app entry and the same service account can upload for it.
+                serviceCredentialsFile = "app/ai-audio-book-2c2ff064ff10.json"
+                groups = "devs"
+            }
+        }
+    }
+    flavorDimensions += "environment"
+    productFlavors {
+        create("prod") {
+            isDefault = true
+            dimension = "environment"
+            buildConfigField(
+                "String",
+                "SERVER_URL",
+                "\"https://ai-audio-book-api-883622140264.us-central1.run.app/\""
+            )
+        }
+        create("dev") {
+            dimension = "environment"
+            buildConfigField("String", "SERVER_URL", "\"http://10.0.2.2:3005/\"")
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    buildFeatures {
+        compose = true
+        aidl = false
+        buildConfig = true
+        shaders = false
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
+dependencies {
+    implementation(project(":core"))
+
+    val composeBom = platform(libs.androidx.compose.bom)
+    implementation(composeBom)
+
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+
+    // Wear Compose (not standard Material3 - watch screens use round/square-aware components)
+    implementation(libs.androidx.wear.compose.material3)
+    implementation(libs.androidx.wear.compose.foundation)
+    implementation(libs.androidx.wear.compose.navigation)
+    implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.androidx.compose.material.icons.extended)
+
+    // Wearable Data Layer (auth-pairing relay with the phone app)
+    implementation(libs.play.services.wearable)
+
+    // Media3 ExoPlayer - the watch runs its own playback service, standalone from the phone
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
+    implementation(libs.androidx.media3.hls)
+
+    // Offline chapter downloads
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.datastore.preferences)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+}

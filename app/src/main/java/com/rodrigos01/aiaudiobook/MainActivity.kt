@@ -144,7 +144,7 @@ class MainActivity : ComponentActivity() {
                     var showWatchConnectionDialog by remember { mutableStateOf(true) }
                     if (watchConnectionState.status != WearAuthRelayHandler.Status.IDLE && showWatchConnectionDialog) {
                         AlertDialog(
-                            onDismissRequest = { showWatchConnectionDialog = false },
+                            onDismissRequest = {},
                             title = { Text("Pairing Watch") },
                             text = { Text(watchConnectionState.message ?: "") },
                             confirmButton = { showWatchConnectionDialog = false },

@@ -67,7 +67,6 @@ android {
             buildConfigField("String", "SERVER_URL", "\"https://ai-audio-book-api-883622140264.us-central1.run.app/\"")
         }
         create("staging") {
-            isDefault = true
             dimension = "environment"
             buildConfigField("String", "SERVER_URL", "\"https://claude-develop-ai-audio-book-api-883622140264.us-central1.run.app/\"")
         }

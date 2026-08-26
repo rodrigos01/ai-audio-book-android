@@ -82,7 +82,7 @@ fun WearChaptersScreen(
                             .fillMaxWidth()
                             .placeholderShimmer(rememberPlaceholderState { blocked })
                     ) {
-                        Text(chapter.name ?: "Chapter")
+                        Text("${chapter.order_index} - ${chapter.name}")
                     }
                 }
             }

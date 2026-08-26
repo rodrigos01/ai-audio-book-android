@@ -31,7 +31,7 @@ fun AuthGateScreen(authViewModel: WearAuthViewModel, modifier: Modifier = Modifi
 
     Column(
         modifier = modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         when (val current = state) {

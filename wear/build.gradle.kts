@@ -116,6 +116,8 @@ dependencies {
     implementation(libs.androidx.wear.compose.material3)
     implementation(libs.androidx.wear.compose.foundation)
     implementation(libs.androidx.wear.compose.navigation)
+    implementation(libs.androidx.wear.tooling.preview)
+    implementation(libs.androidx.wear.compose.ui.tooling)
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
 

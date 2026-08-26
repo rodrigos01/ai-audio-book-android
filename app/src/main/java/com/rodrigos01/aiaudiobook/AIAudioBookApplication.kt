@@ -11,7 +11,7 @@ private const val TAG = "AIAudioBookApp"
 class AIAudioBookApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        CoreConfig.serverUrl = BuildConfig.SERVER_URL
+        CoreConfig.init(this)
 
         // Belt-and-suspenders alongside the manifest-declared WearAuthRelayListenerService:
         // manifest delivery to a non-running app is best-effort and subject to Android's

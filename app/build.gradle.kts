@@ -59,22 +59,6 @@ android {
             }
         }
     }
-    flavorDimensions += "environment"
-    productFlavors {
-        create("prod") {
-            isDefault = true
-            dimension = "environment"
-            buildConfigField("String", "SERVER_URL", "\"https://ai-audio-book-api-883622140264.us-central1.run.app/\"")
-        }
-        create("staging") {
-            dimension = "environment"
-            buildConfigField("String", "SERVER_URL", "\"https://claude-develop-ai-audio-book-api-883622140264.us-central1.run.app/\"")
-        }
-        create("dev") {
-            dimension = "environment"
-            buildConfigField("String", "SERVER_URL", "\"http://10.0.2.2:3005/\"")
-        }
-    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -82,7 +66,7 @@ android {
     buildFeatures {
       compose = true
       aidl = false
-      buildConfig = true
+      buildConfig = false
       shaders = false
     }
 

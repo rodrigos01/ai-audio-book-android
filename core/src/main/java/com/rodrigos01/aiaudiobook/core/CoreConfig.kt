@@ -1,11 +1,23 @@
 package com.rodrigos01.aiaudiobook.core
 
+import android.content.Context
+
 /**
- * Flavor-specific values that [ApiRepository][com.rodrigos01.aiaudiobook.data.ApiRepository] and
- * other `:core` classes need but can't get from a `BuildConfig`, since `:core` has no product
- * flavors of its own. Each app module (`:app`, `:wear`) sets this once, from its own
- * `BuildConfig.SERVER_URL`, before constructing any repository/ViewModel/Worker.
+ * Backend base URL used by [ApiRepository][com.rodrigos01.aiaudiobook.data.ApiRepository] and
+ * other `:core` classes, driven by the user's [Environment] selection (see [EnvironmentStore]).
+ * Each app module (`:app`, `:wear`) calls [init] once from its `Application.onCreate`, before
+ * constructing any repository/ViewModel/Worker.
  */
 object CoreConfig {
     lateinit var serverUrl: String
+        private set
+
+    fun init(context: Context) {
+        serverUrl = EnvironmentStore.get(context).baseUrl
+    }
+
+    fun updateEnvironment(context: Context, environment: Environment) {
+        EnvironmentStore.set(context, environment)
+        serverUrl = environment.baseUrl
+    }
 }

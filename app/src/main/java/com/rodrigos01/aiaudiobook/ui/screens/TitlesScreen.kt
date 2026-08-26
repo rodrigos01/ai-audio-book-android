@@ -1,7 +1,9 @@
 package com.rodrigos01.aiaudiobook.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +40,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,8 +52,12 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.Timestamp
+import com.rodrigos01.aiaudiobook.core.CoreConfig
+import com.rodrigos01.aiaudiobook.core.Environment
+import com.rodrigos01.aiaudiobook.core.EnvironmentStore
 import com.rodrigos01.aiaudiobook.data.Title
 import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
+import com.rodrigos01.aiaudiobook.ui.components.EnvironmentSelectorDialog
 import com.rodrigos01.aiaudiobook.ui.components.TitleBottomSheet
 import com.rodrigos01.aiaudiobook.ui.viewmodel.AuthViewModel
 import com.rodrigos01.aiaudiobook.ui.viewmodel.TitlesUiState
@@ -73,6 +82,9 @@ fun TitlesScreen(
     val actionError by titlesViewModel.actionError.collectAsState()
     val titleToDelete by titlesViewModel.titleToDelete.collectAsState()
 
+    var selectedEnvironment by remember { mutableStateOf(EnvironmentStore.get(context)) }
+    var isEnvironmentDialogOpen by remember { mutableStateOf(false) }
+
     // Fetch titles when screen is first loaded
     LaunchedEffect(currentUser) {
         currentUser?.let {
@@ -87,6 +99,8 @@ fun TitlesScreen(
         isSubmitting = isSubmitting,
         actionError = actionError,
         titleToDelete = titleToDelete,
+        selectedEnvironment = selectedEnvironment,
+        isEnvironmentDialogOpen = isEnvironmentDialogOpen,
         onTitleClick = onTitleClick,
         onSignOutClick = { authViewModel.signOut(context) },
         onRetryClick = { currentUser?.let { titlesViewModel.fetchTitles(it.uid) } },
@@ -104,11 +118,18 @@ fun TitlesScreen(
         },
         onConfirmDelete = { titleId -> titlesViewModel.deleteTitle(titleId) },
         onDismissDeleteConfirmation = { titlesViewModel.dismissDeleteConfirmation() },
+        onTitleLongPress = { isEnvironmentDialogOpen = true },
+        onEnvironmentSelected = { environment ->
+            CoreConfig.updateEnvironment(context, environment)
+            selectedEnvironment = environment
+            isEnvironmentDialogOpen = false
+        },
+        onDismissEnvironmentDialog = { isEnvironmentDialogOpen = false },
         modifier = modifier
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TitlesScreen(
     titlesState: TitlesUiState,
@@ -127,6 +148,11 @@ fun TitlesScreen(
     onSubmitTitle: (name: String, aiCastingEnabled: Boolean, ttsTier: String) -> Unit,
     onConfirmDelete: (titleId: String) -> Unit,
     onDismissDeleteConfirmation: () -> Unit,
+    selectedEnvironment: Environment = Environment.PROD,
+    isEnvironmentDialogOpen: Boolean = false,
+    onTitleLongPress: () -> Unit = {},
+    onEnvironmentSelected: (Environment) -> Unit = {},
+    onDismissEnvironmentDialog: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -137,7 +163,11 @@ fun TitlesScreen(
                 text = "My Audiobooks",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.combinedClickable(
+                    onClick = {},
+                    onLongClick = onTitleLongPress
+                )
             )
         }, actions = {
             IconButton(onClick = onSignOutClick) {
@@ -243,6 +273,15 @@ fun TitlesScreen(
                         }
                     }
                 }
+            }
+
+            // Hidden dev/QA tool: long-press the title above to switch backend environments
+            if (isEnvironmentDialogOpen) {
+                EnvironmentSelectorDialog(
+                    selected = selectedEnvironment,
+                    onSelect = onEnvironmentSelected,
+                    onDismiss = onDismissEnvironmentDialog
+                )
             }
 
             // BottomSheet for creation / editing

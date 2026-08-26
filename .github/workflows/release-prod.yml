@@ -58,22 +58,22 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Build prod release APK
-        run: ./gradlew assembleProdRelease --no-daemon
+      - name: Build release APK
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK build artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-prod-release
-          path: app/build/outputs/apk/prod/release/*.apk
+          path: app/build/outputs/apk/release/*.apk
           retention-days: 30
 
       - name: Upload Wear APK build artifact
         uses: actions/upload-artifact@v4
         with:
           name: wear-prod-release
-          path: wear/build/outputs/apk/prod/release/*.apk
+          path: wear/build/outputs/apk/release/*.apk
           retention-days: 30
 
-      - name: Distribute prod release via Firebase App Distribution
-        run: ./gradlew appDistributionUploadProdRelease --no-daemon
+      - name: Distribute release via Firebase App Distribution
+        run: ./gradlew appDistributionUploadRelease --no-daemon

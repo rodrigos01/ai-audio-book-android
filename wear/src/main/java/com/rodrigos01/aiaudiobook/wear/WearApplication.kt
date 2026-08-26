@@ -9,7 +9,7 @@ import com.rodrigos01.aiaudiobook.wear.auth.WearAuthResultHandler
 class WearApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        CoreConfig.serverUrl = BuildConfig.SERVER_URL
+        CoreConfig.init(this)
 
         // Now that :wear shares :app's applicationId (required for the Wearable Data Layer API
         // to route messages between them - see wear/build.gradle.kts), the phone's existing

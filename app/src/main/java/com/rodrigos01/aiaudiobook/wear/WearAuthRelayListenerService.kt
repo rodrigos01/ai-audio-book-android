@@ -13,6 +13,8 @@ import com.rodrigos01.aiaudiobook.data.WearMessagePaths
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 private const val TAG = "WearAuthRelay"
@@ -34,24 +36,44 @@ object WearAuthRelayHandler {
     private val apiRepository = ApiRepository()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    data class State(
+        val status: Status,
+        val message: String?,
+    )
+
+    enum class Status {
+        IDLE,
+        CONNECTING,
+        CONNECTED,
+        ERROR,
+    }
+
+    private val _connectionState = MutableStateFlow(State(Status.IDLE, null))
+    val connectionState = _connectionState.asStateFlow()
+
     fun handle(context: Context, messageEvent: MessageEvent) {
         Log.d(TAG, "onMessageReceived: ${messageEvent.path}")
         if (messageEvent.path != WearMessagePaths.AUTH_TOKEN_REQUEST) return
         val sourceNodeId = messageEvent.sourceNodeId
 
         scope.launch {
+            _connectionState.value = State(Status.CONNECTING, "Connecting to watch...")
             Log.d(TAG, "calling pairDevice()...")
             val response = if (authRepository.currentUser == null) {
+                _connectionState.value = State(Status.ERROR, "Not signed in on phone")
                 PairTokenMessage(error = "Not signed in on phone")
             } else {
+                _connectionState.value = connectionState.value.copy(message = "Registering watch...")
                 apiRepository.pairDevice().fold(
                     onSuccess = { PairTokenMessage(customToken = it.customToken) },
                     onFailure = { error ->
                         Log.w(TAG, "pairDevice() failed", error)
+                        _connectionState.value = State(Status.ERROR, error.localizedMessage)
                         PairTokenMessage(error = error.localizedMessage ?: "Failed to pair device")
                     }
                 )
             }
+            _connectionState.value = connectionState.value.copy( message = "Saving pairing result...")
             Log.d(TAG, "pairDevice() resolved, sending result back to watch (hasToken=${response.customToken != null})")
 
             runCatching {
@@ -64,7 +86,11 @@ object WearAuthRelayHandler {
                 )
             }.onSuccess {
                 Log.d(TAG, "sent pairing result back to watch")
-            }.onFailure { Log.w(TAG, "Failed to send pairing result back to watch", it) }
+                _connectionState.value = State(Status.CONNECTED, "Paired with watch")
+            }.onFailure {
+                _connectionState.value = State(Status.ERROR, "Failed to send pairing result back to watch")
+                Log.w(TAG, "Failed to send pairing result back to watch", it)
+            }
         }
     }
 }

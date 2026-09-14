@@ -108,12 +108,12 @@ fun TitlesScreen(
         onShowEditBottomSheet = { titlesViewModel.showEditBottomSheet(it) },
         onShowDeleteConfirmation = { titlesViewModel.showDeleteConfirmation(it) },
         onDismissBottomSheet = { titlesViewModel.dismissBottomSheet() },
-        onSubmitTitle = { name, aiCastingEnabled, ttsTier ->
+        onSubmitTitle = { name, aiCastingEnabled, ttsTier, language ->
             val currentEditing = editingTitle
             if (currentEditing != null) {
                 titlesViewModel.updateTitle(currentEditing.id, name)
             } else {
-                titlesViewModel.createTitle(name, aiCastingEnabled, ttsTier)
+                titlesViewModel.createTitle(name, aiCastingEnabled, ttsTier, language)
             }
         },
         onConfirmDelete = { titleId -> titlesViewModel.deleteTitle(titleId) },
@@ -145,7 +145,7 @@ fun TitlesScreen(
     onShowEditBottomSheet: (Title) -> Unit,
     onShowDeleteConfirmation: (Title) -> Unit,
     onDismissBottomSheet: () -> Unit,
-    onSubmitTitle: (name: String, aiCastingEnabled: Boolean, ttsTier: String) -> Unit,
+    onSubmitTitle: (name: String, aiCastingEnabled: Boolean, ttsTier: String, language: String) -> Unit,
     onConfirmDelete: (titleId: String) -> Unit,
     onDismissDeleteConfirmation: () -> Unit,
     selectedEnvironment: Environment = Environment.PROD,
@@ -427,7 +427,7 @@ fun TitlesScreenSuccessPreview() {
             onShowEditBottomSheet = {},
             onShowDeleteConfirmation = {},
             onDismissBottomSheet = {},
-            onSubmitTitle = { _, _, _ -> },
+            onSubmitTitle = { _, _, _, _ -> },
             onConfirmDelete = {},
             onDismissDeleteConfirmation = {})
     }
@@ -451,7 +451,7 @@ fun TitlesScreenEmptyPreview() {
             onShowEditBottomSheet = {},
             onShowDeleteConfirmation = {},
             onDismissBottomSheet = {},
-            onSubmitTitle = { _, _, _ -> },
+            onSubmitTitle = { _, _, _, _ -> },
             onConfirmDelete = {},
             onDismissDeleteConfirmation = {})
     }
@@ -475,7 +475,7 @@ fun TitlesScreenLoadingPreview() {
             onShowEditBottomSheet = {},
             onShowDeleteConfirmation = {},
             onDismissBottomSheet = {},
-            onSubmitTitle = { _, _, _ -> },
+            onSubmitTitle = { _, _, _, _ -> },
             onConfirmDelete = {},
             onDismissDeleteConfirmation = {})
     }

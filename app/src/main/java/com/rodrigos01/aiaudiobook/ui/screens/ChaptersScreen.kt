@@ -121,7 +121,7 @@ fun ChaptersScreen(
         },
         onDeleteDownload = { chapterId -> chaptersViewModel.deleteDownload(chapterId) },
         onDismissBottomSheet = { chaptersViewModel.dismissBottomSheet() },
-        onSubmitChapter = { name, content, voiceId, googleDocId, googleAccessToken ->
+        onSubmitChapter = { name, content, voiceId, googleDocId, googleAccessToken, skipScriptGeneration ->
             val currentEditing = editingChapter
             if (currentEditing != null) {
                 chaptersViewModel.updateChapter(currentEditing.id, name, content)
@@ -132,7 +132,8 @@ fun ChaptersScreen(
                     content = content,
                     voiceId = voiceId ?: "",
                     googleDocId = googleDocId,
-                    googleAccessToken = googleAccessToken
+                    googleAccessToken = googleAccessToken,
+                    skipScriptGeneration = skipScriptGeneration
                 )
             }
         },
@@ -167,7 +168,7 @@ fun ChaptersScreen(
     onRequestDownload: (Chapter) -> Unit,
     onDeleteDownload: (String) -> Unit,
     onDismissBottomSheet: () -> Unit,
-    onSubmitChapter: (name: String, content: String, voiceId: String?, googleDocId: String?, googleAccessToken: String?) -> Unit,
+    onSubmitChapter: (name: String, content: String, voiceId: String?, googleDocId: String?, googleAccessToken: String?, skipScriptGeneration: Boolean) -> Unit,
     onConfirmDeleteChapter: (chapterId: String) -> Unit,
     onDismissDeleteConfirmation: () -> Unit,
     onConfirmMeteredDownload: () -> Unit,
@@ -664,7 +665,7 @@ fun ChaptersScreenSuccessPreview() {
             onRequestDownload = {},
             onDeleteDownload = {},
             onDismissBottomSheet = {},
-            onSubmitChapter = { _, _, _, _, _ -> },
+            onSubmitChapter = { _, _, _, _, _, _ -> },
             onConfirmDeleteChapter = {},
             onDismissDeleteConfirmation = {},
             onConfirmMeteredDownload = {},
@@ -699,7 +700,7 @@ fun ChaptersScreenEmptyPreview() {
             onRequestDownload = {},
             onDeleteDownload = {},
             onDismissBottomSheet = {},
-            onSubmitChapter = { _, _, _, _, _ -> },
+            onSubmitChapter = { _, _, _, _, _, _ -> },
             onConfirmDeleteChapter = {},
             onDismissDeleteConfirmation = {},
             onConfirmMeteredDownload = {},
@@ -734,7 +735,7 @@ fun ChaptersScreenLoadingPreview() {
             onRequestDownload = {},
             onDeleteDownload = {},
             onDismissBottomSheet = {},
-            onSubmitChapter = { _, _, _, _, _ -> },
+            onSubmitChapter = { _, _, _, _, _, _ -> },
             onConfirmDeleteChapter = {},
             onDismissDeleteConfirmation = {},
             onConfirmMeteredDownload = {},

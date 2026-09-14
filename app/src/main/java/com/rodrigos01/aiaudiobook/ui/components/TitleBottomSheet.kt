@@ -1,18 +1,23 @@
 package com.rodrigos01.aiaudiobook.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -37,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rodrigos01.aiaudiobook.core.Language
 import com.rodrigos01.aiaudiobook.data.Title
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,7 +50,7 @@ import com.rodrigos01.aiaudiobook.data.Title
 fun TitleBottomSheet(
     editingTitle: Title?,
     onDismiss: () -> Unit,
-    onSubmit: (name: String, aiCastingEnabled: Boolean, ttsTier: String) -> Unit,
+    onSubmit: (name: String, aiCastingEnabled: Boolean, ttsTier: String, language: String) -> Unit,
     isSubmitting: Boolean,
     errorMessage: String? = null,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -58,6 +64,8 @@ fun TitleBottomSheet(
     var ttsTier by remember(editingTitle) {
         mutableStateOf(editingTitle?.tts_tier ?: "basic")
     }
+    var language by remember(editingTitle) { mutableStateOf(Language.ENGLISH) }
+    var languageDropdownExpanded by remember { mutableStateOf(false) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -172,12 +180,58 @@ fun TitleBottomSheet(
                 }
             }
 
+            // Language (only editable during creation)
+            if (!isEditMode) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Language",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = language.displayName,
+                            onValueChange = {},
+                            readOnly = true,
+                            enabled = false,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { languageDropdownExpanded = true },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+
+                        DropdownMenu(
+                            expanded = languageDropdownExpanded,
+                            onDismissRequest = { languageDropdownExpanded = false },
+                            modifier = Modifier
+                                .fillMaxWidth(0.85f)
+                                .heightIn(max = 320.dp)
+                        ) {
+                            Language.entries.forEach { entry ->
+                                DropdownMenuItem(
+                                    text = { Text(entry.displayName) },
+                                    onClick = {
+                                        language = entry
+                                        languageDropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(
                 onClick = {
                     if (name.isNotBlank() && !isSubmitting) {
-                        onSubmit(name.trim(), aiCastingEnabled, ttsTier)
+                        onSubmit(name.trim(), aiCastingEnabled, ttsTier, language.code)
                     }
                 },
                 enabled = name.isNotBlank() && !isSubmitting,

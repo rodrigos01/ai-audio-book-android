@@ -208,7 +208,8 @@ class ChaptersViewModel(
         content: String,
         voiceId: String,
         googleDocId: String? = null,
-        googleAccessToken: String? = null
+        googleAccessToken: String? = null,
+        skipScriptGeneration: Boolean = false
     ) {
         viewModelScope.launch {
             isSubmitting.value = true
@@ -219,7 +220,8 @@ class ChaptersViewModel(
                 content = content.ifBlank { null },
                 voiceId = voiceId.ifBlank { null },
                 googleDocId = googleDocId,
-                googleAccessToken = googleAccessToken
+                googleAccessToken = googleAccessToken,
+                skipScriptGeneration = skipScriptGeneration
             )
             isSubmitting.value = false
             result.onSuccess {

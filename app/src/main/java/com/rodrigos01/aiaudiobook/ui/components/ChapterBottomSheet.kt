@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -73,7 +75,7 @@ fun ChapterBottomSheet(
     voices: List<Voice>,
     isLoadingVoices: Boolean,
     onDismiss: () -> Unit,
-    onSubmit: (name: String, content: String, voiceId: String, googleDocId: String?, googleAccessToken: String?) -> Unit,
+    onSubmit: (name: String, content: String, voiceId: String, googleDocId: String?, googleAccessToken: String?, skipScriptGeneration: Boolean) -> Unit,
     isSubmitting: Boolean,
     errorMessage: String? = null,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -91,6 +93,7 @@ fun ChapterBottomSheet(
     var googleAccessToken by remember { mutableStateOf<String?>(null) }
     var attachedDocName by remember { mutableStateOf<String?>(null) }
     var voiceDropdownExpanded by remember { mutableStateOf(false) }
+    var skipScriptGeneration by remember(editingChapter) { mutableStateOf(false) }
 
     val requiresVoice = !aiCastingEnabled && !isEditMode
 
@@ -136,10 +139,12 @@ fun ChapterBottomSheet(
             onVoiceSelected = { selectedVoiceId = it },
             voiceDropdownExpanded = voiceDropdownExpanded,
             onVoiceDropdownExpandedChange = { voiceDropdownExpanded = it },
+            skipScriptGeneration = skipScriptGeneration,
+            onSkipScriptGenerationChange = { skipScriptGeneration = it },
             isSubmitting = isSubmitting,
             errorMessage = errorMessage,
             onSubmit = {
-                onSubmit(name.trim(), content.trim(), selectedVoiceId, googleDocId, googleAccessToken)
+                onSubmit(name.trim(), content.trim(), selectedVoiceId, googleDocId, googleAccessToken, skipScriptGeneration)
             }
         )
     }
@@ -164,6 +169,8 @@ fun ChapterBottomSheetContent(
     onVoiceSelected: (String) -> Unit,
     voiceDropdownExpanded: Boolean,
     onVoiceDropdownExpandedChange: (Boolean) -> Unit,
+    skipScriptGeneration: Boolean = false,
+    onSkipScriptGenerationChange: (Boolean) -> Unit = {},
     isSubmitting: Boolean,
     errorMessage: String? = null,
     onSubmit: () -> Unit
@@ -482,6 +489,41 @@ fun ChapterBottomSheetContent(
                     unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                 )
             )
+        }
+
+        // Skip Script Generation (only offered during creation)
+        if (!isEditMode) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSkipScriptGenerationChange(!skipScriptGeneration) },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Skip Script Generation",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Skip reformatting the text into a script before narration",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                }
+                Checkbox(
+                    checked = skipScriptGeneration,
+                    onCheckedChange = onSkipScriptGenerationChange,
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = MaterialTheme.colorScheme.primary,
+                        uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        checkmarkColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
+            }
         }
 
         // Voice Selector (Required only when title has solo voice / ai_casting_enabled == false)

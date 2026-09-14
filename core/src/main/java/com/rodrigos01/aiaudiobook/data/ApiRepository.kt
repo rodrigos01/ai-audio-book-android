@@ -38,7 +38,8 @@ data class Voice(
 data class CreateTitleRequest(
     val name: String,
     val ai_casting_enabled: Boolean,
-    val tts_tier: String
+    val tts_tier: String,
+    val language: String
 )
 
 @Serializable
@@ -71,7 +72,8 @@ data class CreateChapterRequest(
     val content: String? = null,
     val voice_id: String? = null,
     val google_doc_id: String? = null,
-    val google_access_token: String? = null
+    val google_access_token: String? = null,
+    val skip_script_generation: Boolean = false
 )
 
 @Serializable
@@ -235,9 +237,10 @@ class ApiRepository(
     suspend fun createTitle(
         name: String,
         aiCastingEnabled: Boolean,
-        ttsTier: String
+        ttsTier: String,
+        language: String
     ): Result<TitleResponse> = runCatching {
-        apiService.createTitle(CreateTitleRequest(name, aiCastingEnabled, ttsTier))
+        apiService.createTitle(CreateTitleRequest(name, aiCastingEnabled, ttsTier, language))
     }
 
     suspend fun updateTitle(
@@ -259,7 +262,8 @@ class ApiRepository(
         content: String? = null,
         voiceId: String? = null,
         googleDocId: String? = null,
-        googleAccessToken: String? = null
+        googleAccessToken: String? = null,
+        skipScriptGeneration: Boolean = false
     ): Result<ChapterResponse> = runCatching {
         apiService.createChapter(
             titleId,
@@ -268,7 +272,8 @@ class ApiRepository(
                 content = content,
                 voice_id = voiceId,
                 google_doc_id = googleDocId,
-                google_access_token = googleAccessToken
+                google_access_token = googleAccessToken,
+                skip_script_generation = skipScriptGeneration
             )
         )
     }

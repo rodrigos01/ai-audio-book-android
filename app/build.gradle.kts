@@ -152,6 +152,10 @@ dependencies {
   implementation(libs.androidx.media3.hls)
   implementation(libs.androidx.media3.ui.compose)
 
+  // Google Cast
+  implementation(libs.androidx.media3.cast)
+  implementation(libs.androidx.mediarouter)
+
   // Offline chapter downloads
   implementation(libs.androidx.work.runtime.ktx)
   implementation(libs.androidx.datastore.preferences)

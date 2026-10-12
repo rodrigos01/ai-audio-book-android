@@ -3,6 +3,7 @@ package com.rodrigos01.aiaudiobook.common.media
 import android.app.Activity
 import android.app.PendingIntent
 import android.content.Intent
+import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -63,7 +64,11 @@ abstract class BaseAudioPlaybackService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(pendingIntent)
             .build()
+        mediaSession?.let { onSessionCreated(it, player) }
     }
+
+    /** Hook for subclasses that need to swap the session's player (e.g. for Cast). */
+    protected open fun onSessionCreated(session: MediaSession, localPlayer: Player) = Unit
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
         return mediaSession

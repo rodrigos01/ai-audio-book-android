@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -44,11 +45,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import android.view.ContextThemeWrapper
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.mediarouter.app.MediaRouteButton
+import com.google.android.gms.cast.framework.CastButtonFactory
 import androidx.media3.common.util.UnstableApi
 import com.rodrigos01.aiaudiobook.common.media.PlaybackStatus
 import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
@@ -102,6 +109,7 @@ fun PlayerScreen(
                         )
                     }
                 },
+                actions = { CastButton() },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
@@ -253,6 +261,26 @@ fun PlayerScreen(
             }
         }
     }
+}
+
+@Composable
+fun CastButton(modifier: Modifier = Modifier) {
+    if (LocalInspectionMode.current) {
+        Icon(Icons.Default.Cast, contentDescription = "Cast", modifier = modifier.padding(12.dp))
+        return
+    }
+    val tint = MaterialTheme.colorScheme.onBackground.toArgb()
+    AndroidView(
+        modifier = modifier,
+        factory = { context ->
+            // MediaRouteButton needs an AppCompat-derived theme, which the app theme isn't.
+            MediaRouteButton(ContextThemeWrapper(context, androidx.appcompat.R.style.Theme_AppCompat_DayNight)).apply {
+                CastButtonFactory.setUpMediaRouteButton(context.applicationContext, this)
+                contentDescription = "Cast"
+            }
+        },
+        update = { it.setRemoteIndicatorDrawable(it.remoteIndicatorDrawable?.mutate()?.apply { setTint(tint) }) },
+    )
 }
 
 @Composable

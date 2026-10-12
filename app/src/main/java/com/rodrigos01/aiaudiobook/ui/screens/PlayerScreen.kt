@@ -2,6 +2,7 @@ package com.rodrigos01.aiaudiobook.ui.screens
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -45,7 +46,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.viewinterop.AndroidView
@@ -269,17 +269,20 @@ fun CastButton(modifier: Modifier = Modifier) {
         Icon(Icons.Default.Cast, contentDescription = "Cast", modifier = modifier.padding(12.dp))
         return
     }
-    val tint = MaterialTheme.colorScheme.onBackground.toArgb()
+    val themeRes = if (isSystemInDarkTheme()) {
+        androidx.mediarouter.R.style.Theme_MediaRouter
+    } else {
+        androidx.mediarouter.R.style.Theme_MediaRouter_Light
+    }
     AndroidView(
         modifier = modifier,
         factory = { context ->
             // MediaRouteButton needs an AppCompat-derived theme, which the app theme isn't.
-            MediaRouteButton(ContextThemeWrapper(context, androidx.appcompat.R.style.Theme_AppCompat_DayNight)).apply {
+            MediaRouteButton(ContextThemeWrapper(context, themeRes)).apply {
                 CastButtonFactory.setUpMediaRouteButton(context.applicationContext, this)
                 contentDescription = "Cast"
             }
         },
-        update = { it.setRemoteIndicatorDrawable(it.remoteIndicatorDrawable?.mutate()?.apply { setTint(tint) }) },
     )
 }
 

@@ -2,7 +2,6 @@ package com.rodrigos01.aiaudiobook.ui.screens
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -39,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -47,15 +47,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import android.view.ContextThemeWrapper
+import androidx.appcompat.view.ContextThemeWrapper
 import android.view.View
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.mediarouter.app.MediaRouteButton
+import androidx.mediarouter.media.MediaRouteSelector
+import androidx.mediarouter.media.MediaRouter
+import com.google.android.gms.cast.CastMediaControlIntent
+import com.google.android.gms.cast.framework.CastContext
 import com.google.android.gms.cast.framework.CastButtonFactory
 import androidx.media3.common.util.UnstableApi
 import com.rodrigos01.aiaudiobook.common.media.PlaybackStatus
@@ -264,31 +269,69 @@ fun PlayerScreen(
     }
 }
 
+/**
+ * The standard Chromecast button, shown only while there is something to cast to: a cast device
+ * is discoverable, or a cast session is already connected (so it can be ended). Renders nothing
+ * if Cast isn't available at all (e.g. no Play Services).
+ */
 @Composable
 fun CastButton(modifier: Modifier = Modifier) {
     if (LocalInspectionMode.current) {
         Icon(Icons.Default.Cast, contentDescription = "Cast", modifier = modifier.padding(12.dp))
         return
     }
-    val themeRes = if (isSystemInDarkTheme()) {
-        androidx.mediarouter.R.style.Theme_MediaRouter
-    } else {
-        androidx.mediarouter.R.style.Theme_MediaRouter_Light
-    }
+    val context = LocalContext.current
+    val castContext = remember(context) { runCatching { CastContext.getSharedInstance(context) }.getOrNull() }
+        ?: return
+    if (!rememberCastDevicesAvailable(castContext)) return
+
     AndroidView(
-        modifier = modifier,
-        factory = { context ->
-            // MediaRouteButton needs an AppCompat-derived theme, which the app theme isn't.
-            MediaRouteButton(ContextThemeWrapper(context, themeRes)).apply {
-                // Cast init can fail (e.g. no Play Services); hide the button rather than crash.
-                val castReady = runCatching {
-                    CastButtonFactory.setUpMediaRouteButton(context.applicationContext, this)
-                }.isSuccess
-                if (!castReady) visibility = View.GONE
-                contentDescription = "Cast"
+        modifier = modifier.size(48.dp),
+        factory = { ctx ->
+            // MediaRouteButton needs an AppCompat theme; wrap defensively in case the app's isn't.
+            val themed = ContextThemeWrapper(ctx, androidx.appcompat.R.style.Theme_AppCompat)
+            MediaRouteButton(themed).also { button ->
+                val ready = runCatching { CastButtonFactory.setUpMediaRouteButton(ctx, button) }.isSuccess
+                if (!ready) button.visibility = View.GONE
             }
         },
     )
+}
+
+/**
+ * Whether a cast device can currently be picked, or one is connected. Asks the router for active
+ * discovery while on screen (it is otherwise only passive) and follows route changes.
+ */
+@Composable
+private fun rememberCastDevicesAvailable(castContext: CastContext): Boolean {
+    val context = LocalContext.current
+    var available by remember { mutableStateOf(false) }
+
+    DisposableEffect(castContext) {
+        val router = MediaRouter.getInstance(context)
+        val selector = castContext.mergedSelector ?: MediaRouteSelector.Builder()
+            .addControlCategory(
+                CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID)
+            )
+            .build()
+
+        fun refresh() {
+            available = !router.selectedRoute.isDefaultOrBluetooth ||
+                router.routes.any { it.matchesSelector(selector) && !it.isDefaultOrBluetooth }
+        }
+
+        val callback = object : MediaRouter.Callback() {
+            override fun onRouteAdded(router: MediaRouter, route: MediaRouter.RouteInfo) = refresh()
+            override fun onRouteRemoved(router: MediaRouter, route: MediaRouter.RouteInfo) = refresh()
+            override fun onRouteChanged(router: MediaRouter, route: MediaRouter.RouteInfo) = refresh()
+            override fun onRouteSelected(router: MediaRouter, route: MediaRouter.RouteInfo, reason: Int) = refresh()
+            override fun onRouteUnselected(router: MediaRouter, route: MediaRouter.RouteInfo, reason: Int) = refresh()
+        }
+        router.addCallback(selector, callback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY)
+        refresh()
+        onDispose { router.removeCallback(callback) }
+    }
+    return available
 }
 
 @Composable

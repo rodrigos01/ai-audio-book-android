@@ -19,6 +19,7 @@ import androidx.media3.session.MediaSessionService
  */
 abstract class BaseAudioPlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
+    private var exoPlayer: ExoPlayer? = null
 
     protected abstract val sessionActivityClass: Class<out Activity>
 
@@ -52,6 +53,8 @@ abstract class BaseAudioPlaybackService : MediaSessionService() {
             .setLoadControl(loadControl)
             .build()
 
+        exoPlayer = player
+
         val intent = Intent(this, sessionActivityClass).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -82,11 +85,13 @@ abstract class BaseAudioPlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        // The session's player may be a CastPlayer, so release the local ExoPlayer separately.
         mediaSession?.run {
-            player.release()
             release()
             mediaSession = null
         }
+        exoPlayer?.release()
+        exoPlayer = null
         super.onDestroy()
     }
 }

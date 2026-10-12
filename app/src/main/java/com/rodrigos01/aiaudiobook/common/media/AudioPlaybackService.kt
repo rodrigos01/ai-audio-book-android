@@ -22,19 +22,25 @@ class AudioPlaybackService : BaseAudioPlaybackService() {
         if (cast.isCastSessionAvailable) switchPlayer(session, localPlayer, cast)
     }
 
-    /** Moves the current item, position and play state from [from] to [to]. */
+    /**
+     * Hands the current item over to [to] at the same position and stops [from]. Left paused on
+     * the new device (in either direction) so audio doesn't suddenly start on a TV or speaker.
+     * Downloaded (file://) chapters can't be played by a receiver, so they stay on the phone.
+     */
     private fun switchPlayer(session: MediaSession, from: Player, to: Player) {
         if (session.player === to) return
         val items = List(from.mediaItemCount) { from.getMediaItemAt(it) }
+        if (to is CastPlayer && items.any { it.localConfiguration?.uri?.scheme == "file" }) return
         val index = from.currentMediaItemIndex
-        val position = from.currentPosition
-        val playWhenReady = from.playWhenReady
+        val position = from.currentPosition.coerceAtLeast(0L)
+
         from.stop()
         from.clearMediaItems()
         session.player = to
         if (items.isNotEmpty()) {
+            // playWhenReady first: a CastPlayer includes it in the receiver load request.
+            to.playWhenReady = false
             to.setMediaItems(items, index, position)
-            to.playWhenReady = playWhenReady
             to.prepare()
         }
     }

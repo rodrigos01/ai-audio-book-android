@@ -53,6 +53,7 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import android.view.ContextThemeWrapper
+import android.view.View
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.mediarouter.app.MediaRouteButton
 import com.google.android.gms.cast.framework.CastButtonFactory
@@ -279,7 +280,11 @@ fun CastButton(modifier: Modifier = Modifier) {
         factory = { context ->
             // MediaRouteButton needs an AppCompat-derived theme, which the app theme isn't.
             MediaRouteButton(ContextThemeWrapper(context, themeRes)).apply {
-                CastButtonFactory.setUpMediaRouteButton(context.applicationContext, this)
+                // Cast init can fail (e.g. no Play Services); hide the button rather than crash.
+                val castReady = runCatching {
+                    CastButtonFactory.setUpMediaRouteButton(context.applicationContext, this)
+                }.isSuccess
+                if (!castReady) visibility = View.GONE
                 contentDescription = "Cast"
             }
         },

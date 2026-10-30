@@ -11,6 +11,12 @@ class CastOptionsProvider : OptionsProvider {
     override fun getCastOptions(context: Context): CastOptions =
         CastOptions.Builder()
             .setReceiverApplicationId(context.getString(R.string.cast_receiver_app_id))
+            // Same flags as media3's DefaultCastOptionsProvider. remote-to-local is what lets the
+            // system Output Switcher move playback back to this phone or a Bluetooth device.
+            .setRemoteToLocalEnabled(true)
+            .setResumeSavedSession(true)
+            .setEnableReconnectionService(true)
+            .setStopReceiverApplicationWhenEndingSession(true)
             .build()
 
     override fun getAdditionalSessionProviders(context: Context): List<SessionProvider>? = null

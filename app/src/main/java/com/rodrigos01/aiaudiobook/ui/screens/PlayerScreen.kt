@@ -52,11 +52,14 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.appcompat.view.ContextThemeWrapper
+import android.content.Context
 import android.util.Log
 import android.view.View
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.cast.MediaRouteButtonFactory
 import androidx.mediarouter.app.MediaRouteButton
+import androidx.mediarouter.media.MediaRouter
+import androidx.mediarouter.media.MediaRouterParams
 import androidx.media3.common.util.UnstableApi
 import com.rodrigos01.aiaudiobook.common.media.PlaybackStatus
 import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
@@ -281,6 +284,7 @@ fun CastButton(modifier: Modifier = Modifier) {
             val themed = ContextThemeWrapper(ctx, androidx.appcompat.R.style.Theme_AppCompat)
             MediaRouteButton(themed).also { button ->
                 val ready = runCatching {
+                    enableOutputSwitcher(ctx)
                     MediaRouteButtonFactory.setUpMediaRouteButton(ctx, button)
                     button.setAlwaysVisible(true)
                 }.onFailure { Log.w("CastButton", "Output button setup failed", it) }.isSuccess
@@ -289,6 +293,13 @@ fun CastButton(modifier: Modifier = Modifier) {
             }
         },
     )
+}
+
+/** The button only opens the system switcher (instead of the legacy dialog) when the router asks for it. */
+private fun enableOutputSwitcher(context: Context) {
+    val router = MediaRouter.getInstance(context)
+    val params = router.routerParams?.let { MediaRouterParams.Builder(it) } ?: MediaRouterParams.Builder()
+    router.routerParams = params.setOutputSwitcherEnabled(true).setTransferToLocalEnabled(true).build()
 }
 
 @Composable

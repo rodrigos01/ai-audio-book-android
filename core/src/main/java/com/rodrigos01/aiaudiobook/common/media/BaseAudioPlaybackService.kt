@@ -20,6 +20,7 @@ import androidx.media3.session.MediaSessionService
 abstract class BaseAudioPlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private var exoPlayer: ExoPlayer? = null
+    private var sessionPlayer: Player? = null
 
     protected abstract val sessionActivityClass: Class<out Activity>
 
@@ -64,14 +65,17 @@ abstract class BaseAudioPlaybackService : MediaSessionService() {
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        mediaSession = MediaSession.Builder(this, player)
+        sessionPlayer = createSessionPlayer(player)
+        mediaSession = MediaSession.Builder(this, sessionPlayer!!)
             .setSessionActivity(pendingIntent)
             .build()
-        mediaSession?.let { onSessionCreated(it, player) }
     }
 
-    /** Hook for subclasses that need to swap the session's player (e.g. for Cast). */
-    protected open fun onSessionCreated(session: MediaSession, localPlayer: Player) = Unit
+    /**
+     * The player the session drives. Defaults to the local [ExoPlayer]; subclasses can wrap it
+     * (e.g. in a CastPlayer that hands playback to other output devices).
+     */
+    protected open fun createSessionPlayer(localPlayer: ExoPlayer): Player = localPlayer
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
         return mediaSession
@@ -85,11 +89,13 @@ abstract class BaseAudioPlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
-        // The session's player may be a CastPlayer, so release the local ExoPlayer separately.
         mediaSession?.run {
             release()
             mediaSession = null
         }
+        // The session player may wrap the ExoPlayer (e.g. CastPlayer); release both.
+        sessionPlayer?.release()
+        sessionPlayer = null
         exoPlayer?.release()
         exoPlayer = null
         super.onDestroy()

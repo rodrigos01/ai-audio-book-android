@@ -6,8 +6,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Android 17 (targetSdk 37) blocks LAN access, including Cast device discovery, without this. -->
-    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
     <queries>
         <package android:name="com.google.android.apps.docs" />
@@ -34,6 +32,8 @@
         <meta-data
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
             android:value="com.rodrigos01.aiaudiobook.common.media.CastOptionsProvider" />
+        <!-- Lets the system Output Switcher find Cast devices and reroute media without our UI. -->
+        <receiver android:name="androidx.mediarouter.media.MediaTransferReceiver" />
         <activity
             android:name=".MainActivity"
             android:exported="true">

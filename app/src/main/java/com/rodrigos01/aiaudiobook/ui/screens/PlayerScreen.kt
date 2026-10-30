@@ -38,8 +38,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -48,25 +46,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.appcompat.view.ContextThemeWrapper
-import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
 import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import android.view.View
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.cast.MediaRouteButtonFactory
 import androidx.mediarouter.app.MediaRouteButton
-import com.google.android.gms.cast.framework.CastContext
-import com.google.android.gms.cast.framework.CastButtonFactory
 import androidx.media3.common.util.UnstableApi
 import com.rodrigos01.aiaudiobook.common.media.PlaybackStatus
 import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
@@ -275,34 +265,15 @@ fun PlayerScreen(
 }
 
 /**
- * The standard Chromecast button. Always shown while Cast is available (tapping it with no
- * devices nearby says so), and hidden only if the Cast SDK can't initialize (e.g. no Play Services).
+ * Opens the system Output Switcher, where the user picks this phone, a Bluetooth device or a Cast
+ * device. The switcher also does the device discovery, so the app needs no network permission.
  */
 @Composable
 fun CastButton(modifier: Modifier = Modifier) {
     if (LocalInspectionMode.current) {
-        Icon(Icons.Default.Cast, contentDescription = "Cast", modifier = modifier.padding(12.dp))
+        Icon(Icons.Default.Cast, contentDescription = "Output", modifier = modifier.padding(12.dp))
         return
     }
-    val context = LocalContext.current
-    val castAvailable = remember(context) {
-        runCatching { CastContext.getSharedInstance(context) }
-            .onFailure { Log.w("CastButton", "Cast unavailable", it) }
-            .isSuccess
-    }
-    if (!castAvailable) return
-
-    // Android 17+ blocks LAN access (and so Cast device discovery) until this is granted. The
-    // button is rebuilt once the answer is in so discovery restarts with access.
-    var localNetworkGranted by remember { mutableStateOf(hasLocalNetworkAccess(context)) }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        localNetworkGranted = it
-    }
-    LaunchedEffect(Unit) {
-        if (!localNetworkGranted) permissionLauncher.launch(LOCAL_NETWORK_PERMISSION)
-    }
-
-    key(localNetworkGranted) {
     AndroidView(
         modifier = modifier.size(48.dp),
         factory = { ctx ->
@@ -310,22 +281,15 @@ fun CastButton(modifier: Modifier = Modifier) {
             val themed = ContextThemeWrapper(ctx, androidx.appcompat.R.style.Theme_AppCompat)
             MediaRouteButton(themed).also { button ->
                 val ready = runCatching {
-                    CastButtonFactory.setUpMediaRouteButton(ctx, button)
+                    MediaRouteButtonFactory.setUpMediaRouteButton(ctx, button)
                     button.setAlwaysVisible(true)
-                }.onFailure { Log.w("CastButton", "Cast button setup failed", it) }.isSuccess
+                }.onFailure { Log.w("CastButton", "Output button setup failed", it) }.isSuccess
                 if (!ready) button.visibility = View.GONE
+                button.contentDescription = "Output"
             }
         },
     )
-    }
 }
-
-private const val LOCAL_NETWORK_PERMISSION = "android.permission.ACCESS_LOCAL_NETWORK"
-
-/** True where the permission doesn't apply (below Android 17) or is already granted. */
-private fun hasLocalNetworkAccess(context: Context): Boolean =
-    Build.VERSION.SDK_INT < 37 ||
-        ContextCompat.checkSelfPermission(context, LOCAL_NETWORK_PERMISSION) == PackageManager.PERMISSION_GRANTED
 
 @Composable
 fun PlayPauseButton(imageVector: ImageVector, onPlayPauseClick: () -> Unit) {

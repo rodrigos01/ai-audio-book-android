@@ -3,6 +3,7 @@ package com.rodrigos01.aiaudiobook.common.media
 import android.app.Activity
 import android.app.PendingIntent
 import android.content.Intent
+import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -18,6 +19,8 @@ import androidx.media3.session.MediaSessionService
  */
 abstract class BaseAudioPlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
+    private var exoPlayer: ExoPlayer? = null
+    private var sessionPlayer: Player? = null
 
     protected abstract val sessionActivityClass: Class<out Activity>
 
@@ -51,6 +54,8 @@ abstract class BaseAudioPlaybackService : MediaSessionService() {
             .setLoadControl(loadControl)
             .build()
 
+        exoPlayer = player
+
         val intent = Intent(this, sessionActivityClass).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -60,10 +65,17 @@ abstract class BaseAudioPlaybackService : MediaSessionService() {
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        mediaSession = MediaSession.Builder(this, player)
+        sessionPlayer = createSessionPlayer(player)
+        mediaSession = MediaSession.Builder(this, sessionPlayer!!)
             .setSessionActivity(pendingIntent)
             .build()
     }
+
+    /**
+     * The player the session drives. Defaults to the local [ExoPlayer]; subclasses can wrap it
+     * (e.g. in a CastPlayer that hands playback to other output devices).
+     */
+    protected open fun createSessionPlayer(localPlayer: ExoPlayer): Player = localPlayer
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
         return mediaSession
@@ -78,10 +90,14 @@ abstract class BaseAudioPlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         mediaSession?.run {
-            player.release()
             release()
             mediaSession = null
         }
+        // The session player may wrap the ExoPlayer (e.g. CastPlayer); release both.
+        sessionPlayer?.release()
+        sessionPlayer = null
+        exoPlayer?.release()
+        exoPlayer = null
         super.onDestroy()
     }
 }

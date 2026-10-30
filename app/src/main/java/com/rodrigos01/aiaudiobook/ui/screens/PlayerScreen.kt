@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -45,10 +46,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.appcompat.view.ContextThemeWrapper
+import android.util.Log
+import android.view.View
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.cast.MediaRouteButtonFactory
+import androidx.mediarouter.app.MediaRouteButton
 import androidx.media3.common.util.UnstableApi
 import com.rodrigos01.aiaudiobook.common.media.PlaybackStatus
 import com.rodrigos01.aiaudiobook.theme.AIAudioBookTheme
@@ -102,6 +110,7 @@ fun PlayerScreen(
                         )
                     }
                 },
+                actions = { CastButton() },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
@@ -253,6 +262,33 @@ fun PlayerScreen(
             }
         }
     }
+}
+
+/**
+ * Opens the system Output Switcher, where the user picks this phone, a Bluetooth device or a Cast
+ * device. The switcher also does the device discovery, so the app needs no network permission.
+ */
+@Composable
+fun CastButton(modifier: Modifier = Modifier) {
+    if (LocalInspectionMode.current) {
+        Icon(Icons.Default.Cast, contentDescription = "Output", modifier = modifier.padding(12.dp))
+        return
+    }
+    AndroidView(
+        modifier = modifier.size(48.dp),
+        factory = { ctx ->
+            // MediaRouteButton needs an AppCompat theme; wrap defensively in case the app's isn't.
+            val themed = ContextThemeWrapper(ctx, androidx.appcompat.R.style.Theme_AppCompat)
+            MediaRouteButton(themed).also { button ->
+                val ready = runCatching {
+                    MediaRouteButtonFactory.setUpMediaRouteButton(ctx, button)
+                    button.setAlwaysVisible(true)
+                }.onFailure { Log.w("CastButton", "Output button setup failed", it) }.isSuccess
+                if (!ready) button.visibility = View.GONE
+                button.contentDescription = "Output"
+            }
+        },
+    )
 }
 
 @Composable

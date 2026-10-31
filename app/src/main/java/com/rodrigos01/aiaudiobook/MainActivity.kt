@@ -4,7 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -66,7 +66,7 @@ sealed interface Route {
     data class Player(val titleId: String, val chapterId: String)
 }
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     private val offlineDownloadRepository by lazy { OfflineDownloadRepository(this) }
 

@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.MediaSessionService
@@ -86,15 +87,21 @@ class MediaPlaybackService(context: Context, serviceClass: Class<out MediaSessio
     }
 
     fun setMedia(
-        uri: Uri, title: String? = null, artist: String? = null, playWhenReady: Boolean = true
+        uri: Uri,
+        title: String? = null,
+        artist: String? = null,
+        durationMs: Long? = null,
+        playWhenReady: Boolean = true,
     ) {
         val ctrl = controller
         if (currentMediaUri == uri && ctrl?.playbackState != Player.STATE_ENDED) return
         currentMediaUri = uri
 
-        val metadata = MediaMetadata.Builder().setTitle(title).setArtist(artist).build()
+        val metadata = MediaMetadata.Builder().setTitle(title).setArtist(artist).setDurationMs(durationMs).build()
 
-        val mediaItem = MediaItem.Builder().setUri(uri).setMediaMetadata(metadata).build()
+        // CastPlayer's item converter requires a MIME type; the remote chapter is an HLS stream.
+        val mimeType = if (uri.scheme == "file") null else MimeTypes.APPLICATION_M3U8
+        val mediaItem = MediaItem.Builder().setUri(uri).setMimeType(mimeType).setMediaMetadata(metadata).build()
 
         val executeSetMedia = { targetCtrl: MediaController ->
             targetCtrl.playWhenReady = playWhenReady

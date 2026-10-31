@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.AIAudioBook" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- AppCompat-based (still light, no action bar) only because the Cast route dialog is an
+         AppCompat dialog fragment that reads its colors from the activity theme; with a plain
+         framework theme it crashes when the cast button is tapped. The UI itself is Compose. -->
+    <style name="Theme.AIAudioBook" parent="Theme.AppCompat.Light.NoActionBar" />
 </resources>

@@ -152,6 +152,12 @@ dependencies {
   implementation(libs.androidx.media3.hls)
   implementation(libs.androidx.media3.ui.compose)
 
+  // Google Cast
+  implementation(libs.androidx.media3.cast)
+  implementation(libs.androidx.mediarouter)
+  // MediaRouteButton and the route dialog need an AppCompat theme, so depend on it directly
+  implementation(libs.androidx.appcompat)
+
   // Offline chapter downloads
   implementation(libs.androidx.work.runtime.ktx)
   implementation(libs.androidx.datastore.preferences)

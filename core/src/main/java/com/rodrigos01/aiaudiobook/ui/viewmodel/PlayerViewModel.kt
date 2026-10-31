@@ -71,6 +71,7 @@ class PlayerViewModel(
                 uri = uri,
                 title = chapter.name,
                 artist = title?.name,
+                durationMs = estimatedDurationMs,
             )
 
             ChapterPlaybackInfo(title, chapter, estimatedDurationMs, isOffline = localFilePath != null)

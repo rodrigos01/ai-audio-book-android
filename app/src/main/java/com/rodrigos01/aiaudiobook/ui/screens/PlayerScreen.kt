@@ -20,12 +20,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Cast
+import androidx.compose.material.icons.filled.BluetoothAudio
+import androidx.compose.material.icons.filled.CastConnected
+import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Speaker
+import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
@@ -38,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -46,19 +55,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.appcompat.view.ContextThemeWrapper
 import android.content.Context
+import android.content.ContextWrapper
 import android.util.Log
-import android.view.View
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.media3.cast.MediaRouteButtonFactory
-import androidx.mediarouter.app.MediaRouteButton
+import androidx.fragment.app.FragmentActivity
+import androidx.mediarouter.app.MediaRouteChooserDialogFragment
+import androidx.mediarouter.app.MediaRouteControllerDialogFragment
+import androidx.mediarouter.app.SystemOutputSwitcherDialogController
+import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
+import androidx.mediarouter.media.MediaRouter.RouteInfo
+import com.google.android.gms.cast.CastMediaControlIntent
 import androidx.mediarouter.media.MediaRouterParams
 import androidx.media3.common.util.UnstableApi
 import com.rodrigos01.aiaudiobook.common.media.PlaybackStatus
@@ -267,39 +280,121 @@ fun PlayerScreen(
     }
 }
 
+private const val OUTPUT_PICKER_TAG = "output_picker"
+
+/** Where audio is currently going, as reported by the media router. */
+private data class OutputRoute(val name: String, val deviceType: Int, val isLocal: Boolean, val isBluetooth: Boolean)
+
+private fun OutputRoute.icon(): ImageVector = when {
+    isLocal -> Icons.Default.Devices
+    isBluetooth -> Icons.Default.BluetoothAudio
+    else -> when (deviceType) {
+        RouteInfo.DEVICE_TYPE_TV, RouteInfo.DEVICE_TYPE_HDMI, RouteInfo.DEVICE_TYPE_HDMI_ARC,
+        RouteInfo.DEVICE_TYPE_HDMI_EARC, RouteInfo.DEVICE_TYPE_AUDIO_VIDEO_RECEIVER -> Icons.Default.Tv
+
+        RouteInfo.DEVICE_TYPE_SPEAKER, RouteInfo.DEVICE_TYPE_REMOTE_SPEAKER,
+        RouteInfo.DEVICE_TYPE_GROUP -> Icons.Default.Speaker
+
+        RouteInfo.DEVICE_TYPE_WIRED_HEADSET, RouteInfo.DEVICE_TYPE_WIRED_HEADPHONES,
+        RouteInfo.DEVICE_TYPE_USB_HEADSET, RouteInfo.DEVICE_TYPE_BLE_HEADSET,
+        RouteInfo.DEVICE_TYPE_HEARING_AID -> Icons.Default.Headphones
+
+        RouteInfo.DEVICE_TYPE_CAR -> Icons.Default.DirectionsCar
+        RouteInfo.DEVICE_TYPE_COMPUTER -> Icons.Default.Computer
+        RouteInfo.DEVICE_TYPE_SMARTWATCH -> Icons.Default.Watch
+        else -> Icons.Default.CastConnected
+    }
+}
+
+private fun RouteInfo.toOutputRoute() = OutputRoute(name, deviceType, isDefault, isBluetooth)
+
 /**
- * Opens the system Output Switcher, where the user picks this phone, a Bluetooth device or a Cast
- * device. The switcher also does the device discovery, so the app needs no network permission.
+ * "Devices" button: shows where audio is playing (this phone, a Bluetooth device, a Cast device...)
+ * and opens the system Output Switcher to change it. Hidden if Cast can't initialize (e.g. no
+ * Play Services).
  */
 @Composable
 fun CastButton(modifier: Modifier = Modifier) {
     if (LocalInspectionMode.current) {
-        Icon(Icons.Default.Cast, contentDescription = "Output", modifier = modifier.padding(12.dp))
+        Icon(Icons.Default.Devices, contentDescription = "Output", modifier = modifier.padding(12.dp))
         return
     }
-    AndroidView(
-        modifier = modifier.size(48.dp),
-        factory = { ctx ->
-            // MediaRouteButton needs an AppCompat theme; wrap defensively in case the app's isn't.
-            val themed = ContextThemeWrapper(ctx, androidx.appcompat.R.style.Theme_AppCompat)
-            MediaRouteButton(themed).also { button ->
-                val ready = runCatching {
-                    enableOutputSwitcher(ctx)
-                    MediaRouteButtonFactory.setUpMediaRouteButton(ctx, button)
-                    button.setAlwaysVisible(true)
-                }.onFailure { Log.w("CastButton", "Output button setup failed", it) }.isSuccess
-                if (!ready) button.visibility = View.GONE
-                button.contentDescription = "Output"
-            }
-        },
-    )
+    val context = LocalContext.current
+    val castContext = remember(context) {
+        runCatching { CastContext.getSharedInstance(context) }
+            .onFailure { Log.w("CastButton", "Cast unavailable", it) }
+            .getOrNull()
+    } ?: return
+    val selector = remember(castContext) {
+        castContext.mergedSelector ?: MediaRouteSelector.Builder()
+            .addControlCategory(
+                CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID)
+            )
+            .build()
+    }
+    val route = rememberSelectedOutputRoute(selector)
+
+    IconButton(onClick = { openOutputPicker(context, selector) }, modifier = modifier) {
+        Icon(
+            imageVector = route.icon(),
+            contentDescription = "Playing on ${route.name}. Change output",
+            tint = if (route.isLocal) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.primary,
+        )
+    }
 }
 
-/** The button only opens the system switcher (instead of the legacy dialog) when the router asks for it. */
-private fun enableOutputSwitcher(context: Context) {
-    val router = MediaRouter.getInstance(context)
-    val params = router.routerParams?.let { MediaRouterParams.Builder(it) } ?: MediaRouterParams.Builder()
-    router.routerParams = params.setOutputSwitcherEnabled(true).setTransferToLocalEnabled(true).build()
+/**
+ * The router's currently selected output, kept up to date. Asks for active discovery while on
+ * screen (it is otherwise only passive).
+ */
+@Composable
+private fun rememberSelectedOutputRoute(selector: MediaRouteSelector): OutputRoute {
+    val context = LocalContext.current
+    val router = remember(context) { MediaRouter.getInstance(context) }
+    var route by remember { mutableStateOf(router.selectedRoute.toOutputRoute()) }
+
+    DisposableEffect(router, selector) {
+        // The router only opens the system switcher (instead of the legacy dialog) when it's asked to.
+        val params = router.routerParams?.let { MediaRouterParams.Builder(it) } ?: MediaRouterParams.Builder()
+        router.routerParams = params.setOutputSwitcherEnabled(true).setTransferToLocalEnabled(true).build()
+
+        fun refresh() {
+            route = router.selectedRoute.toOutputRoute()
+        }
+
+        val callback = object : MediaRouter.Callback() {
+            override fun onRouteAdded(router: MediaRouter, route: RouteInfo) = refresh()
+            override fun onRouteRemoved(router: MediaRouter, route: RouteInfo) = refresh()
+            override fun onRouteChanged(router: MediaRouter, route: RouteInfo) = refresh()
+            override fun onRouteSelected(router: MediaRouter, route: RouteInfo, reason: Int) = refresh()
+            override fun onRouteUnselected(router: MediaRouter, route: RouteInfo, reason: Int) = refresh()
+        }
+        router.addCallback(selector, callback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY)
+        refresh()
+        onDispose { router.removeCallback(callback) }
+    }
+    return route
+}
+
+/** Opens the system Output Switcher, or the legacy Cast dialogs on devices that don't have it. */
+private fun openOutputPicker(context: Context, selector: MediaRouteSelector) {
+    if (SystemOutputSwitcherDialogController.showDialog(context)) return
+    val activity = context.findFragmentActivity() ?: return
+    val fragmentManager = activity.supportFragmentManager
+    if (fragmentManager.findFragmentByTag(OUTPUT_PICKER_TAG) != null) return
+    val connected = !MediaRouter.getInstance(context).selectedRoute.isDefaultOrBluetooth
+    val dialog = if (connected) {
+        MediaRouteControllerDialogFragment()
+    } else {
+        MediaRouteChooserDialogFragment().also { it.routeSelector = selector }
+    }
+    dialog.show(fragmentManager, OUTPUT_PICKER_TAG)
+}
+
+private tailrec fun Context.findFragmentActivity(): FragmentActivity? = when (this) {
+    is FragmentActivity -> this
+    is ContextWrapper -> baseContext.findFragmentActivity()
+    else -> null
 }
 
 @Composable
